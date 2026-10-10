@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>SupplyChain Sentinel — Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+  :root{
+    --orange:#f97316; --orange-d:#ea580c; --navy:#1a2b3c;
+    --text:#1e2d3d; --muted:#7a92a8; --mid:#4a6070;
+    --card:rgba(255,255,255,0.96); --bg1:#cfe2f3; --bg2:#ddeef8; --bg3:#eaf4fc;
+    --border:rgba(200,220,240,0.5); --shadow:0 8px 32px rgba(60,100,160,0.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%);min-height:100vh;color:var(--text);}
+
+  /* ── NAV ── */
+  #topnav{position:fixed;top:0;left:0;right:0;height:58px;z-index:200;
+    background:rgba(255,255,255,0.97);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;padding:0 24px;gap:10px;
+    box-shadow:0 2px 12px rgba(60,100,160,0.07);}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1rem;color:var(--navy);text-decoration:none;}
+  .logo-icon{width:32px;height:32px;background:var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+  .logo-icon svg{color:#fff;}
+  .demo-badge{background:#fff7ed;color:var(--orange);border:1px solid #fed7aa;border-radius:20px;font-size:.68rem;font-weight:700;padding:2px 9px;letter-spacing:.04em;}
+  .nav-tabs{display:flex;align-items:center;gap:4px;margin-left:28px;}
+  .nav-tab{padding:6px 18px;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--mid);transition:all .18s;}
+  .nav-tab.active{background:var(--orange);color:#fff;font-weight:700;}
+  .nav-tab:hover:not(.active){background:#f1f5f9;color:var(--navy);}
+  .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:34px;height:34px;border-radius:50%;background:transparent;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:.18s;}
+  .icon-btn:hover{background:#f1f5f9;color:var(--navy);}
+  .notif-wrap{position:relative;}
+  .notif-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--orange);border-radius:50%;border:2px solid #fff;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f97316,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.8rem;cursor:pointer;}
+
+  /* ── PAGES ── */
+  #app{padding-top:58px;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  /* ── HERO ── */
+  .hero{position:relative;height:440px;overflow:hidden;background:linear-gradient(180deg,#ccdff0 0%,#d8eaf8 60%,#ddeef8 100%);}
+  .hero svg.iso{width:100%;height:100%;display:block;}
+  .hero-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(255,255,255,0.95);backdrop-filter:blur(14px);
+    border-radius:18px;padding:18px 24px;width:240px;
+    box-shadow:0 12px 40px rgba(60,100,160,0.18);border:1px solid rgba(255,255,255,0.9);}
+  .hero-card-title{font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.05em;margin-bottom:4px;}
+  .hero-card-label{font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .hero-card-label span{font-size:.75rem;color:var(--muted);font-weight:400;}
+  .hero-pct{font-size:1.8rem;font-weight:900;color:var(--orange);text-align:right;margin-bottom:6px;}
+  .prog-wrap{height:8px;background:#e8f0f8;border-radius:99px;overflow:hidden;}
+  .prog-bar{height:100%;border-radius:99px;background:var(--orange);transition:width .6s;}
+
+  /* ── DASHBOARD GRID ── */
+  .dash-wrap{padding:0 24px 32px;margin-top:-72px;position:relative;z-index:10;}
+  .dash-grid{display:grid;grid-template-columns:240px 220px 1fr 1fr 230px;gap:16px;align-items:start;}
+
+  /* ── CARDS ── */
+  .card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--border);backdrop-filter:blur(10px);}
+  .card-p{padding:20px;}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .card-title{font-size:.78rem;font-weight:700;color:var(--navy);letter-spacing:.02em;}
+  .card-sub{font-size:.7rem;color:var(--muted);}
+  .section-lbl{font-size:.68rem;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+
+  /* Stat row inside Command Overview */
+  .cmd-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f5fa;}
+  .cmd-row:last-child{border-bottom:none;padding-bottom:0;}
+  .cmd-icon{width:36px;height:36px;border-radius:10px;background:#f0f6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+  .cmd-info{flex:1;}
+  .cmd-label{font-size:.75rem;color:var(--muted);}
+  .cmd-name{font-size:.83rem;font-weight:600;color:var(--navy);margin-bottom:1px;}
+  .cmd-val{font-size:1.15rem;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:4px;}
+  .up{color:#22c55e;font-size:.75rem;}
+  .down{color:#ef4444;font-size:.75rem;}
+
+  /* Today selector */
+  .today-sel{border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:.78rem;font-weight:600;color:var(--navy);background:#fff;cursor:pointer;outline:none;}
+
+  /* Live Logistics mini */
+  .mini-iso{height:120px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#ccdff0,#d8eaf8);margin-bottom:14px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;}
+  .stat2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .stat2-item{background:#f7fbff;border-radius:12px;padding:10px 12px;}
+  .stat2-lbl{font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-bottom:4px;}
+  .stat2-val{font-size:1.25rem;font-weight:800;color:var(--navy);}
+  .stat2-unit{font-size:.7rem;color:var(--muted);}
+  .cap-prog-wrap{height:6px;background:#e8f0f8;border-radius:99px;overflow:hidden;margin-top:6px;}
+  .cap-prog{height:100%;border-radius:99px;background:var(--orange);}
+
+  /* Tracking card */
+  .track-id{font-size:1.4rem;font-weight:900;color:var(--navy);letter-spacing:-.01em;margin-bottom:14px;}
+  .track-status{font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#fff3e8;color:var(--orange);}
+  .track-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;}
+  .track-dot{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .track-dot.current{background:var(--orange);color:#fff;}
+  .track-dot.done{background:#dcfce7;color:#16a34a;}
+  .track-dot.pending{background:#e2e8f0;color:#94a3b8;}
+  .track-loc-name{font-size:.88rem;font-weight:700;color:var(--navy);}
+  .track-loc-sub{font-size:.72rem;color:var(--muted);}
+  .track-line{width:2px;height:20px;background:linear-gradient(var(--orange),#e2e8f0);margin:0 7px;border-radius:2px;}
+
+  /* Alert right column */
+  .alert-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f5fa;}
+  .alert-row:last-child{border-bottom:none;}
+  .alert-row-left{display:flex;align-items:center;gap:10px;}
+  .alert-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .alert-name{font-size:.82rem;font-weight:700;color:var(--navy);}
+  .alert-desc{font-size:.68rem;color:var(--muted);}
+  .alert-val{font-size:1rem;font-weight:800;color:var(--navy);}
+  .alert-meta{font-size:.68rem;color:var(--muted);text-align:right;}
+
+  /* BADGES */
+  .badge{border-radius:20px;padding:3px 10px;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;}
+  .badge-green{background:#dcfce7;color:#16a34a;}
+  .badge-orange{background:#fff7ed;color:var(--orange);}
+  .badge-red{background:#fee2e2;color:#dc2626;}
+  .badge-blue{background:#dbeafe;color:#1d4ed8;}
+  .badge-gray{background:#f1f5f9;color:#64748b;}
+  .badge-yellow{background:#fef3c7;color:#b45309;}
+  .badge-critical{background:#dc2626;color:#fff;}
+  .badge-purple{background:#f3e8ff;color:#7c3aed;}
+
+  /* ── INNER PAGES (Flow, Warehouses, Insights, Reports) ── */
+  .inner-page{padding:28px 28px 32px;}
+  .inner-header{margin-bottom:24px;}
+  .inner-title{font-size:1.4rem;font-weight:800;color:var(--navy);margin-bottom:4px;}
+  .inner-sub{font-size:.85rem;color:var(--muted);}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .mb-4{margin-bottom:16px;} .mb-6{margin-bottom:24px;}
+
+  /* TABLE */
+  .tbl{width:100%;border-collapse:collapse;font-size:.84rem;}
+  .tbl th{text-align:left;padding:10px 14px;color:var(--muted);font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid #f0f5fa;}
+  .tbl td{padding:12px 14px;border-bottom:1px solid #f7fafc;vertical-align:middle;}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tbl tr:hover td{background:#f7fbff;cursor:pointer;}
+  .tbl tr.selected td{background:rgba(249,115,22,0.05);}
+
+  /* INPUTS */
+  .inp{border:1px solid var(--border);border-radius:10px;padding:7px 12px;font-size:.84rem;outline:none;background:#fff;color:var(--navy);width:100%;}
+  .inp:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.2);}
+  select.inp{cursor:pointer;width:auto;}
+
+  /* BUTTONS */
+  .btn{padding:8px 18px;border-radius:10px;font-size:.84rem;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;transition:all .18s;}
+  .btn-primary{background:var(--orange);color:#fff;} .btn-primary:hover{background:var(--orange-d);}
+  .btn-secondary{background:#f1f5f9;color:#475569;} .btn-secondary:hover{background:#e2e8f0;}
+  .btn-danger{background:#fee2e2;color:#dc2626;}
+  .btn-success{background:#dcfce7;color:#16a34a;}
+  .btn-sm{padding:5px 12px;font-size:.76rem;border-radius:8px;}
+
+  /* TABS */
+  .tab-bar{display:flex;gap:4px;padding:4px;background:#f1f5f9;border-radius:12px;width:fit-content;margin-bottom:18px;flex-wrap:wrap;}
+  .tab{padding:6px 16px;border-radius:9px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b;transition:.18s;}
+  .tab.active{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(30,58,95,.1);}
+
+  /* PIPELINE */
+  .pipeline-wrap{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:12px 0 18px;}
+  .pipeline-stage{width:120px;flex-shrink:0;text-align:center;}
+  .ps-circle{width:48px;height:48px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:2.5px solid;}
+  .pipeline-stage.done .ps-circle{background:#dcfce7;border-color:#22c55e;}
+  .pipeline-stage.ps-active .ps-circle{background:#fff7ed;border-color:var(--orange);animation:pulse-border 2s infinite;}
+  .pipeline-stage.delayed .ps-circle{background:#fee2e2;border-color:#ef4444;}
+  .pipeline-stage.missing .ps-circle{background:#fef3c7;border-color:#f59e0b;}
+  .pipeline-stage.pending .ps-circle{background:#f8fafc;border-color:#cbd5e1;}
+  @keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.4);}50%{box-shadow:0 0 0 8px rgba(249,115,22,.0);}}
+  .ps-name{font-size:.72rem;font-weight:700;color:var(--navy);}
+  .ps-loc{font-size:.65rem;color:var(--muted);margin-top:2px;}
+  .ps-badge{font-size:.64rem;font-weight:700;margin-top:4px;padding:2px 7px;border-radius:10px;display:inline-block;}
+  .pipeline-stage.done .ps-badge{background:#dcfce7;color:#16a34a;}
+  .pipeline-stage.ps-active .ps-badge{background:#fff7ed;color:var(--orange);}
+  .pipeline-stage.delayed .ps-badge{background:#fee2e2;color:#dc2626;}
+  .pipeline-stage.missing .ps-badge{background:#fef3c7;color:#b45309;}
+  .pipeline-stage.pending .ps-badge{background:#f1f5f9;color:#94a3b8;}
+  .pipe-connector{height:2px;margin-top:24px;flex:1;min-width:20px;border-radius:2px;}
+  .pipe-connector.done{background:#22c55e;} .pipe-connector.active{background:linear-gradient(to right,#22c55e,var(--orange));} .pipe-connector.pending{background:#e2e8f0;}
+
+  /* TIMELINE */
+  .timeline{list-style:none;position:relative;padding-left:26px;}
+  .timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--orange),#bfdbfe);border-radius:2px;}
+  .tl-item{position:relative;padding-bottom:18px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute;left:-22px;width:15px;height:15px;border-radius:50%;border:2px solid #fff;top:2px;}
+  .tl-dot.done{background:#22c55e;} .tl-dot.active{background:var(--orange);animation:pulse-dot 1.5s infinite;}
+  .tl-dot.delayed{background:#ef4444;} .tl-dot.missing{background:#f59e0b;} .tl-dot.pending{background:#cbd5e1;}
+  @keyframes pulse-dot{0%,100%{box-shadow:0 0 0 2px rgba(249,115,22,.5);}50%{box-shadow:0 0 0 6px rgba(249,115,22,0);}}
+  .tl-title{font-weight:600;font-size:.86rem;color:var(--navy);}
+  .tl-sub{font-size:.73rem;color:var(--muted);margin-top:2px;}
+  .tl-warn{font-size:.73rem;color:#ef4444;margin-top:2px;font-weight:600;}
+  .tl-miss{font-size:.73rem;color:#b45309;margin-top:2px;font-weight:600;}
+
+  /* RISK */
+  .risk-item{padding:12px 14px;border-radius:12px;margin-bottom:10px;border-left:4px solid;}
+  .risk-critical{background:#fff5f5;border-color:#dc2626;} .risk-high{background:#fff7ed;border-color:var(--orange);}
+  .risk-medium{background:#fffbeb;border-color:#f59e0b;} .risk-low{background:#f0fdf4;border-color:#22c55e;}
+
+  /* INTEGRITY */
+  .hash-text{font-family:'Courier New',monospace;font-size:.68rem;word-break:break-all;}
+  .hash-ok{color:#16a34a;} .hash-bad{color:#dc2626;background:#fee2e2;padding:1px 4px;border-radius:4px;}
+  .integrity-disclaimer{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;font-size:.78rem;color:#78350f;line-height:1.65;}
+
+  /* UPDATE FORM */
+  .update-form{background:#f7fbff;border:1px solid #e0eef8;border-radius:14px;padding:18px;margin-top:20px;}
+  .form-label{font-size:.76rem;font-weight:600;color:var(--mid);display:block;margin-bottom:4px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .form-group{margin-bottom:12px;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:12px;font-size:.84rem;font-weight:600;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  /* EMPTY STATE */
+  .empty-state{text-align:center;padding:36px 20px;color:var(--muted);}
+  .empty-icon{font-size:2.2rem;margin-bottom:8px;}
+  .empty-text{font-size:.84rem;}
+
+  /* PROG */
+  .prog-wrap-g{height:8px;background:#e8f0f8;border-radius:99px;overflow:hidden;}
+  .prog-bar-g{height:100%;border-radius:99px;transition:width .5s;}
+
+  /* MISC */
+  .flex-between{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .text-muted{color:var(--muted);}
+  .fw-bold{font-weight:700;} .fw-semi{font-weight:600;}
+  .map-ph{background:linear-gradient(135deg,#cce0f0,#d8ecf8);border-radius:12px;height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#3b82f6;border:1.5px dashed #93c5fd;}
+
+  @media(max-width:1100px){.dash-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:700px){.dash-grid{grid-template-columns:1fr;}.nav-tabs{display:none;}.inner-page{padding:16px;}.grid-2{grid-template-columns:1fr;}.form-row{grid-template-columns:1fr;}}
+  ::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:#f1f5f9;}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px;}
+  </style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- ═══════ NAV ═══════ -->
+<nav id="topnav">
+  <a class="logo" href="#">
+    <span class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+    SupplyChain Sentinel
+  </a>
+  <span class="demo-badge">DEMO</span>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="navigate('command',this)">Command</button>
+    <button class="nav-tab" onclick="navigate('flow',this)">Flow</button>
+    <button class="nav-tab" onclick="navigate('warehouses',this)">Warehouses</button>
+    <button class="nav-tab" onclick="navigate('insights',this)">Insights</button>
+    <button class="nav-tab" onclick="navigate('reports',this)">Reports</button>
+  </div>
+  <div class="nav-right">
+    <button class="icon-btn" title="Search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </button>
+    <div class="notif-wrap">
+      <button class="icon-btn" onclick="navigate('flow',document.querySelectorAll('.nav-tab')[1])" title="Alerts">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot" id="notif-dot"></span>
+      </button>
+    </div>
+    <button class="icon-btn" title="Messages">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    </button>
+    <button class="icon-btn" onclick="doRefresh(this)" title="Refresh">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+    </button>
+    <div class="avatar" title="Demo User — Logistics Manager">SS</div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════
+     PAGE: COMMAND
+══════════════════════════════ -->
+<div id="page-command" class="page active">
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <!-- Isometric warehouse SVG scene -->
+    <svg class="iso" viewBox="0 0 1400 460" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c2d9ee"/>
+          <stop offset="100%" stop-color="#d6ebf8"/>
+        </linearGradient>
+        <linearGradient id="fogG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(210,232,248,0.85)"/>
+          <stop offset="100%" stop-color="rgba(210,232,248,0)"/>
+        </linearGradient>
+        <linearGradient id="b1roof" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e2eef8"/><stop offset="100%" stop-color="#d8e8f5"/></linearGradient>
+        <linearGradient id="b1front" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ccd9ea"/><stop offset="100%" stop-color="#c2d0e2"/></linearGradient>
+        <linearGradient id="b1right" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b8c8dc"/><stop offset="100%" stop-color="#acbece"/></linearGradient>
+        <linearGradient id="cylG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#cad9ea"/><stop offset="100%" stop-color="#dce9f4"/></linearGradient>
+        <linearGradient id="groundG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c8daea"/><stop offset="100%" stop-color="#baccde"/></linearGradient>
+        <filter id="drop-shadow"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(60,100,160,0.15)"/></filter>
+      </defs>
+
+      <!-- Sky -->
+      <rect width="1400" height="460" fill="url(#skyG)"/>
+
+      <!-- Ground plane -->
+      <polygon points="0,380 400,260 1400,380 1400,460 0,460" fill="url(#groundG)" opacity="0.6"/>
+      <polygon points="200,320 700,220 1400,350 1400,460 0,460 0,400" fill="#c4d6e8" opacity="0.35"/>
+
+      <!-- ── Building 5 (far left background) ── -->
+      <polygon points="180,145 340,190 300,218 140,173" fill="#dce8f4" opacity="0.8"/>
+      <polygon points="180,145 340,190 340,270 180,225" fill="#c5d3e2" opacity="0.8"/>
+      <polygon points="340,190 300,218 300,298 340,270" fill="#b5c4d5" opacity="0.8"/>
+
+      <!-- ── Building 3 (tall control tower, left) ── -->
+      <polygon points="360,82 430,108 400,128 330,102" fill="#e0ecf8"/>
+      <polygon points="360,82 430,108 430,248 360,222" fill="#c8d8ea"/>
+      <polygon points="430,108 400,128 400,268 430,248" fill="#b8c8dc"/>
+      <!-- windows -->
+      <rect x="372" y="118" width="18" height="14" rx="2" fill="#a0b8d0" opacity="0.6"/>
+      <rect x="372" y="142" width="18" height="14" rx="2" fill="#a0b8d0" opacity="0.6"/>
+      <rect x="372" y="166" width="18" height="14" rx="2" fill="#a0b8d0" opacity="0.6"/>
+      <rect x="372" y="190" width="18" height="14" rx="2" fill="#a0b8d0" opacity="0.6"/>
+
+      <!-- ── Building 2 (left warehouse) ── -->
+      <polygon points="510,128 750,195 680,238 440,171" fill="#ddeaf8" filter="url(#drop-shadow)"/>
+      <polygon points="510,128 750,195 750,305 510,238" fill="#c8d8ea"/>
+      <polygon points="750,195 680,238 680,348 750,305" fill="#b8c6d8"/>
+      <!-- roof lines (skylights) -->
+      <line x1="540" y1="147" x2="720" y2="196" stroke="#ccd8e8" stroke-width="1.5"/>
+      <line x1="570" y1="157" x2="748" y2="206" stroke="#ccd8e8" stroke-width="1.5"/>
+      <!-- doors -->
+      <rect x="632" y="268" width="28" height="40" rx="2" fill="#9ab0c8"/>
+      <rect x="548" y="196" width="24" height="30" rx="2" fill="#9ab0c8"/>
+
+      <!-- ── Building 1 (MAIN warehouse, center) ── -->
+      <polygon points="740,110 1060,188 978,238 658,160" fill="url(#b1roof)" filter="url(#drop-shadow)"/>
+      <polygon points="740,110 1060,188 1060,310 740,232" fill="url(#b1front)"/>
+      <polygon points="1060,188 978,238 978,360 1060,310" fill="url(#b1right)"/>
+      <!-- roof ridgeline -->
+      <line x1="740" y1="110" x2="1060" y2="188" stroke="#d0e0ee" stroke-width="2"/>
+      <!-- windows/vents row -->
+      <rect x="760" y="140" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <rect x="800" y="150" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <rect x="840" y="158" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <rect x="880" y="167" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <rect x="920" y="176" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <rect x="960" y="185" width="22" height="16" rx="2" fill="#b0c4d8" opacity="0.7"/>
+      <!-- front wall windows -->
+      <rect x="755" y="185" width="28" height="22" rx="2" fill="#96afc8" opacity="0.6"/>
+      <rect x="800" y="195" width="28" height="22" rx="2" fill="#96afc8" opacity="0.6"/>
+      <rect x="845" y="205" width="28" height="22" rx="2" fill="#96afc8" opacity="0.6"/>
+      <!-- door -->
+      <rect x="888" y="215" width="35" height="52" rx="2" fill="#8aa2bc"/>
+      <!-- loading bay / orange accent -->
+      <rect x="755" y="232" width="50" height="0" rx="0" fill="none"/>
+      <polygon points="750,232 810,248 810,310 750,294" fill="#f0a050" opacity="0.45"/>
+
+      <!-- ── Building 4 (background, right of main) ── -->
+      <polygon points="1050,148 1200,185 1152,212 1002,175" fill="#dce8f4" opacity="0.85"/>
+      <polygon points="1050,148 1200,185 1200,270 1050,233" fill="#c4d4e6" opacity="0.85"/>
+      <polygon points="1200,185 1152,212 1152,297 1200,270" fill="#b4c4d6" opacity="0.85"/>
+
+      <!-- ── Cylinders / tanks (far right) ── -->
+      <!-- Tank 1 (largest) -->
+      <ellipse cx="1270" cy="188" rx="52" ry="26" fill="#dce8f5"/>
+      <rect x="1218" y="188" width="104" height="100" fill="url(#cylG)"/>
+      <ellipse cx="1270" cy="288" rx="52" ry="26" fill="#c8d8e8"/>
+      <line x1="1218" y1="238" x2="1322" y2="238" stroke="#b8c8da" stroke-width="1"/>
+      <line x1="1218" y1="218" x2="1322" y2="218" stroke="#b8c8da" stroke-width="1" stroke-dasharray="4,3"/>
+      <!-- highlight stripe -->
+      <rect x="1244" y="188" width="18" height="100" fill="rgba(255,255,255,0.18)" rx="2"/>
+      <!-- Tank 2 -->
+      <ellipse cx="1340" cy="228" rx="42" ry="21" fill="#dce8f5"/>
+      <rect x="1298" y="228" width="84" height="80" fill="url(#cylG)"/>
+      <ellipse cx="1340" cy="308" rx="42" ry="21" fill="#c8d8e8"/>
+      <rect x="1316" y="228" width="14" height="80" fill="rgba(255,255,255,0.18)" rx="2"/>
+      <!-- Tank 3 -->
+      <ellipse cx="1218" cy="255" rx="36" ry="18" fill="#dde9f5"/>
+      <rect x="1182" y="255" width="72" height="68" fill="url(#cylG)"/>
+      <ellipse cx="1218" cy="323" rx="36" ry="18" fill="#c4d4e6"/>
+      <!-- Tank legs/platform -->
+      <line x1="1238" y1="320" x2="1250" y2="355" stroke="#b0c4d8" stroke-width="3"/>
+      <line x1="1298" y1="320" x2="1286" y2="355" stroke="#b0c4d8" stroke-width="3"/>
+
+      <!-- ── Power transmission tower ── -->
+      <line x1="288" y1="88" x2="288" y2="330" stroke="#b0c0d4" stroke-width="2.5"/>
+      <line x1="268" y1="145" x2="308" y2="145" stroke="#b0c0d4" stroke-width="2"/>
+      <line x1="272" y1="185" x2="304" y2="185" stroke="#b0c0d4" stroke-width="1.5"/>
+      <line x1="275" y1="225" x2="301" y2="225" stroke="#b0c0d4" stroke-width="1.5"/>
+      <line x1="268" y1="145" x2="288" y2="88" stroke="#b0c0d4" stroke-width="1.5"/>
+      <line x1="308" y1="145" x2="288" y2="88" stroke="#b0c0d4" stroke-width="1.5"/>
+      <!-- power lines -->
+      <path d="M268,145 Q150,165 60,175" stroke="#b0c0d4" stroke-width="1" fill="none" stroke-dasharray="4,3"/>
+      <path d="M308,145 Q480,128 580,135" stroke="#b0c0d4" stroke-width="1" fill="none" stroke-dasharray="4,3"/>
+
+      <!-- ── Trucks (bottom left) ── -->
+      <!-- Truck 1 (blue container) -->
+      <polygon points="95,328 215,298 215,348 95,378" fill="#5580aa"/>
+      <polygon points="215,298 248,290 248,340 215,348" fill="#4470a0"/>
+      <polygon points="95,298 215,268 215,298 95,328" fill="#4a7095"/>
+      <!-- cab -->
+      <polygon points="248,290 275,283 275,320 248,327" fill="#3a6090"/>
+      <polygon points="248,283 275,276 275,283 248,290" fill="#4a7088"/>
+      <rect x="252" y="293" width="18" height="14" rx="2" fill="#8ab8dc" opacity="0.8"/>
+      <!-- wheels -->
+      <circle cx="116" cy="378" r="10" fill="#2a3a4a"/><circle cx="116" cy="378" r="5" fill="#4a5a6a"/>
+      <circle cx="190" cy="373" r="10" fill="#2a3a4a"/><circle cx="190" cy="373" r="5" fill="#4a5a6a"/>
+      <circle cx="252" cy="360" r="9" fill="#2a3a4a"/>
+
+      <!-- Truck 2 (smaller, right of truck 1) -->
+      <polygon points="60,348 145,325 145,362 60,385" fill="#4a6a8a" opacity="0.75"/>
+      <polygon points="60,325 145,302 145,325 60,348" fill="#3a5a7a" opacity="0.75"/>
+      <polygon points="145,325 168,318 168,355 145,362" fill="#384e6a" opacity="0.75"/>
+      <circle cx="80" cy="385" r="8" fill="#2a3a4a" opacity="0.75"/>
+      <circle cx="130" cy="377" r="8" fill="#2a3a4a" opacity="0.75"/>
+
+      <!-- ── Conveyor belt + boxes (bottom center) ── -->
+      <!-- Belt -->
+      <polygon points="310,375 540,320 600,345 370,400" fill="#a8b8c8" opacity="0.6"/>
+      <polygon points="310,365 540,310 540,320 310,375" fill="#98a8b8" opacity="0.6"/>
+      <!-- Belt lines -->
+      <line x1="350" y1="315" x2="385" y2="400" stroke="#8898a8" stroke-width="1.5" opacity="0.5"/>
+      <line x1="400" y1="300" x2="435" y2="385" stroke="#8898a8" stroke-width="1.5" opacity="0.5"/>
+      <line x1="450" y1="286" x2="485" y2="371" stroke="#8898a8" stroke-width="1.5" opacity="0.5"/>
+      <line x1="500" y1="272" x2="530" y2="350" stroke="#8898a8" stroke-width="1.5" opacity="0.5"/>
+      <!-- Boxes on belt -->
+      <polygon points="345,328 375,320 375,350 345,358" fill="#e8c878"/><polygon points="345,320 375,312 375,320 345,328" fill="#d4b464"/><polygon points="375,320 390,316 390,346 375,350" fill="#c8a858"/>
+      <polygon points="400,314 428,306 428,336 400,344" fill="#e8c878"/><polygon points="400,306 428,298 428,306 400,314" fill="#d4b464"/><polygon points="428,306 444,302 444,332 428,336" fill="#c8a858"/>
+      <polygon points="454,300 480,293 480,322 454,329" fill="#e8c878"/><polygon points="454,293 480,286 480,293 454,300" fill="#d4b464"/>
+      <!-- Orange tracking dot on conveyor -->
+      <circle cx="448" cy="360" r="9" fill="var(--orange)" opacity="0.9"/>
+      <circle cx="448" cy="360" r="5" fill="#fff" opacity="0.8"/>
+
+      <!-- ── Atmospheric fog overlay (top) ── -->
+      <rect width="1400" height="130" fill="url(#fogG)"/>
+    </svg>
+
+    <!-- Floating Active Shipments card -->
+    <div class="hero-card">
+      <div class="hero-card-title">ACTIVE SHIPMENTS</div>
+      <div class="hero-card-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Tracking live orders. <span id="hero-shipment-count">—</span>
+      </div>
+      <div class="hero-pct" id="hero-pct">—%</div>
+      <div class="prog-wrap"><div class="prog-bar" id="hero-prog-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM DASHBOARD ── -->
+  <div class="dash-wrap">
+    <div class="dash-grid">
+
+      <!-- 1. Command Overview -->
+      <div class="card card-p" id="cmd-overview-card">
+        <div class="card-header">
+          <span class="card-title">Command Overview</span>
+          <select class="today-sel" id="cmd-period" onchange="renderCommandAlerts()">
+            <option>Today</option><option>This Week</option><option>This Month</option>
+          </select>
+        </div>
+        <div id="cmd-rows">
+          <div class="cmd-row">
+            <div class="cmd-icon">🚚</div>
+            <div class="cmd-info">
+              <div class="cmd-label">Shipments Today</div>
+              <div class="cmd-name">Today's total deliveries</div>
+            </div>
+            <div>
+              <div class="cmd-val" id="co-active">—<span class="up">↑</span></div>
+            </div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-icon">📊</div>
+            <div class="cmd-info">
+              <div class="cmd-label">Delivery Rate</div>
+              <div class="cmd-name">On-time performance metric</div>
+            </div>
+            <div>
+              <div class="cmd-val" id="co-ontime">—<span class="up">↑</span></div>
+            </div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-icon">🏭</div>
+            <div class="cmd-info">
+              <div class="cmd-label">Active Warehouses</div>
+              <div class="cmd-name">Real-time warehouse operations</div>
+            </div>
+            <div>
+              <div class="cmd-val" id="co-wh">— <span class="badge badge-green" style="font-size:.64rem;">Health</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Live Logistics Flow -->
+      <div class="card card-p">
+        <div class="card-header" style="margin-bottom:10px;">
+          <span class="card-title">🚛 Live Logistics Flow</span>
+        </div>
+        <div class="mini-iso">
+          <!-- Mini isometric scene -->
+          <svg viewBox="0 0 200 120" style="width:100%;height:100%;" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="120" fill="linear-gradient(#c8daf0,#d8eaf8)"/>
+            <!-- mini building -->
+            <polygon points="30,30 90,18 90,58 30,70" fill="#ccd8e8"/>
+            <polygon points="30,20 90,8 90,18 30,30" fill="#dce8f6"/>
+            <polygon points="90,18 110,22 110,62 90,58" fill="#b8c8da"/>
+            <!-- mini truck 1 -->
+            <polygon points="10,72 50,62 50,80 10,90" fill="#5580aa"/>
+            <polygon points="10,62 50,52 50,62 10,72" fill="#4470a0"/>
+            <polygon points="50,62 64,58 64,74 50,78" fill="#3a6088"/>
+            <circle cx="22" cy="90" r="6" fill="#2a3848"/><circle cx="46" cy="87" r="6" fill="#2a3848"/>
+            <!-- mini truck 2 -->
+            <polygon points="80,78 118,68 118,85 80,95" fill="#4a6a88" opacity="0.8"/>
+            <polygon points="80,68 118,58 118,68 80,78" fill="#3a5a78" opacity="0.8"/>
+            <polygon points="118,68 134,64 134,80 118,84" fill="#354a68" opacity="0.8"/>
+            <circle cx="92" cy="94" r="5" fill="#2a3848" opacity="0.8"/><circle cx="114" cy="90" r="5" fill="#2a3848" opacity="0.8"/>
+            <!-- boxes -->
+            <polygon points="130,30 152,24 152,38 130,44" fill="#e8c878"/><polygon points="130,22 152,16 152,24 130,30" fill="#d4b464"/>
+            <polygon points="158,26 178,20 178,34 158,40" fill="#e8c878"/><polygon points="158,18 178,12 178,20 158,26" fill="#d4b464"/>
+            <!-- orange dot -->
+            <circle cx="100" cy="108" r="6" fill="#f97316" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="stat2">
+          <div class="stat2-item">
+            <div class="stat2-lbl">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/></svg>
+              Capacity Used
+            </div>
+            <div class="stat2-val" id="ll-cap">—</div>
+            <div class="cap-prog-wrap"><div class="cap-prog" id="ll-cap-bar" style="width:0%"></div></div>
+          </div>
+          <div class="stat2-item">
+            <div class="stat2-lbl">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+              Available Space
+            </div>
+            <div class="stat2-val" id="ll-avail">— <span class="stat2-unit">units</span></div>
+            <div style="font-size:.68rem;color:#22c55e;margin-top:4px;" id="ll-avail-up">↑ units free</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Tracking Details -->
+      <div class="card card-p" id="tracking-card">
+        <div class="card-header">
+          <span class="card-title">📦 Tracking Details</span>
+          <span id="track-status-badge" class="track-status">In transit</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px;">Tracking ID</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="track-id" id="track-id">SCS-2026-001</div>
+          <select class="inp" id="track-ship-sel" onchange="updateTrackingCard()" style="width:auto;font-size:.75rem;padding:4px 8px;">
+          </select>
+        </div>
+        <div id="track-rows">
+          <div class="track-row">
+            <div class="track-dot current">●</div>
+            <div>
+              <div class="track-loc-sub">Current Location</div>
+              <div class="track-loc-name" id="track-current">—</div>
+            </div>
+          </div>
+          <div class="track-line"></div>
+          <div class="track-row">
+            <div class="track-dot done">✓</div>
+            <div>
+              <div class="track-loc-sub">Departure</div>
+              <div class="track-loc-name" id="track-departure">—</div>
+            </div>
+          </div>
+          <div class="track-line"></div>
+          <div class="track-row">
+            <div class="track-dot pending">○</div>
+            <div>
+              <div class="track-loc-sub">Arrival</div>
+              <div class="track-loc-name" id="track-arrival">—</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary btn-sm" onclick="navigate('command',document.querySelectorAll('.nav-tab')[0]);showShipmentDetails(document.getElementById('track-ship-sel').value)">View Full Details →</button>
+        </div>
+      </div>
+
+      <!-- 4. Performance Insights -->
+      <div class="card card-p">
+        <div class="card-header">
+          <span class="card-title">📈 Performance Insights</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--muted);"><span style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;"></span>Shipments</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--muted);"><span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>Trend</span>
+          </div>
+        </div>
+        <div style="position:relative;height:160px;"><canvas id="chart-perf-cmd"></canvas></div>
+      </div>
+
+      <!-- 5. Right column: System Alerts + Inventory -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- System Alerts -->
+        <div class="card card-p">
+          <div class="card-header">
+            <span class="card-title">🔔 System Alerts</span>
+            <span class="badge badge-gray" style="font-size:.65rem;" id="cmd-alert-badge">—</span>
+          </div>
+          <div class="alert-row">
+            <div class="alert-row-left">
+              <div class="alert-icon" style="background:#fff7ed;">⚠️</div>
+              <div><div class="alert-name">Late Shipments</div><div class="alert-desc">Daily Volume</div></div>
+            </div>
+            <div style="text-align:right;">
+              <div class="alert-val" id="sys-late">—</div>
+              <div class="alert-meta">shipments</div>
+            </div>
+          </div>
+          <div class="alert-row">
+            <div class="alert-row-left">
+              <div class="alert-icon" style="background:#fee2e2;">🚨</div>
+              <div><div class="alert-name">Capacity Risk</div><div class="alert-desc">Storage Running</div></div>
+            </div>
+            <div style="text-align:right;">
+              <div class="alert-val" id="sys-cap">—</div>
+              <div class="alert-meta">warehouses ≥90%</div>
+            </div>
+          </div>
+          <div class="alert-row">
+            <div class="alert-row-left">
+              <div class="alert-icon" style="background:#dbeafe;">🔒</div>
+              <div><div class="alert-name">Integrity Alerts</div><div class="alert-desc">Hash Mismatch</div></div>
+            </div>
+            <div style="text-align:right;">
+              <div class="alert-val" id="sys-int">—</div>
+              <div class="alert-meta">records</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventory Snapshot -->
+        <div class="card card-p">
+          <div class="card-header">
+            <span class="card-title">📦 Inventory Snapshot</span>
+            <div style="text-align:right;">
+              <div style="font-size:1.3rem;font-weight:900;color:var(--navy);" id="inv-count">—</div>
+              <div style="font-size:.68rem;color:var(--muted);">product lines</div>
+            </div>
+          </div>
+          <div style="position:relative;height:90px;"><canvas id="chart-inv-cmd"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shipment Management (searchable table + detail panel) -->
+    <div style="margin-top:20px;">
+      <div class="card card-p mb-4">
+        <div class="flex-between mb-4">
+          <div>
+            <div class="section-lbl">Shipment Management</div>
+            <div style="font-size:.76rem;color:var(--muted);">Click a row for details, tracking timeline &amp; update form</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input class="inp" id="sh-search" placeholder="🔍 Search ID, product, city…" oninput="filterShipments()" style="width:200px;">
+            <select class="inp" id="sh-status" onchange="filterShipments()" style="width:auto;">
+              <option value="">All Status</option>
+              <option>In Transit</option><option>Delivered</option>
+              <option>Delayed</option><option>At Risk</option>
+            </select>
+            <select class="inp" id="sh-priority" onchange="filterShipments()" style="width:auto;">
+              <option value="">All Priority</option>
+              <option>Critical</option><option>High</option>
+              <option>Normal</option><option>Low</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="exportShipmentsCSV()">⬇ Export CSV</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>Tracking ID</th><th>Product</th><th>Route</th><th>Carrier</th>
+              <th>Status</th><th>ETA</th><th>Priority</th><th></th>
+            </tr></thead>
+            <tbody id="sh-tbody"></tbody>
+          </table>
+        </div>
+        <div id="sh-empty" class="empty-state" style="display:none;"><div class="empty-icon">🔍</div><div class="empty-text">No shipments match your filters.</div></div>
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span style="font-size:.75rem;color:var(--muted);" id="sh-count"></span>
+          <div id="sh-pages" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+
+      <!-- Detail panel + Alerts -->
+      <div class="grid-2">
+        <div class="card card-p" id="detail-panel">
+          <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">← Click any shipment row to view details and update form</div></div>
+        </div>
+        <div class="card card-p">
+          <div class="flex-between mb-4">
+            <div class="section-lbl">System Risk Alerts</div>
+            <div style="display:flex;gap:6px;">
+              <select class="inp" id="risk-sev-filter" onchange="renderRiskPanel()" style="width:auto;font-size:.75rem;padding:4px 8px;">
+                <option value="">All Severity</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+              </select>
+              <select class="inp" id="risk-ship-filter" onchange="renderRiskPanel()" style="width:auto;font-size:.75rem;padding:4px 8px;">
+                <option value="">All Shipments</option>
+              </select>
+            </div>
+          </div>
+          <div id="risk-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: FLOW ════ -->
+<div id="page-flow" class="page">
+  <div class="inner-page">
+    <div class="flex-between inner-header">
+      <div><div class="inner-title">Supply Chain Flow</div><div class="inner-sub">End-to-end journey: Manufacturer → Retailer</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select class="inp" id="flow-shipment" onchange="renderFlowPage()" style="width:auto;min-width:270px;"></select>
+        <button class="btn btn-primary btn-sm" onclick="renderFlowPage()">View Journey</button>
+      </div>
+    </div>
+    <div class="card card-p mb-4">
+      <div class="flex-between mb-4">
+        <div class="section-lbl">Route Pipeline</div>
+        <div id="flow-status-badge"></div>
+      </div>
+      <div class="pipeline-wrap" id="flow-pipeline">
+        <div class="empty-state" style="width:100%;"><div class="empty-icon">🚚</div><div class="empty-text">Select a shipment to view its route pipeline.</div></div>
+      </div>
+      <div id="flow-delay-note" style="margin-top:8px;font-size:.78rem;color:#ef4444;display:none;"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card card-p">
+        <div class="flex-between mb-4">
+          <div class="section-lbl">Checkpoint Timeline</div>
+          <span id="flow-progress-badge" class="badge badge-blue"></span>
+        </div>
+        <div id="flow-timeline"><div class="empty-state"><div class="empty-icon">📍</div><div class="empty-text">Select a shipment.</div></div></div>
+      </div>
+      <div class="card card-p">
+        <div class="flex-between mb-4">
+          <div class="section-lbl">Risk Detection — All Shipments</div>
+          <div style="display:flex;gap:6px;">
+            <select class="inp" id="flow-risk-sev" onchange="renderFlowRiskPanel()" style="width:auto;font-size:.75rem;padding:4px 8px;">
+              <option value="">All Severity</option>
+              <option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option>
+            </select>
+          </div>
+        </div>
+        <div id="flow-risk-panel"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: WAREHOUSES ════ -->
+<div id="page-warehouses" class="page">
+  <div class="inner-page">
+    <div class="flex-between inner-header">
+      <div><div class="inner-title">Warehouse Network</div><div class="inner-sub">Capacity, inventory &amp; status overview (sample data)</div></div>
+      <select class="inp" id="wh-region" onchange="renderWarehouses()" style="width:auto;">
+        <option value="">All Regions</option>
+        <option>North</option><option>South</option><option>East</option><option>West</option><option>Central</option>
+      </select>
+    </div>
+    <div class="grid-2 mb-4">
+      <div class="card card-p">
+        <div class="section-lbl" style="margin-bottom:10px;">Warehouse Locations (Schematic)</div>
+        <div class="map-ph"><span style="font-size:2rem;">🗺️</span><span style="font-weight:600;font-size:.84rem;">Interactive map requires external API</span><span style="font-size:.72rem;color:var(--muted);">14 warehouses across 5 regions</span></div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;" id="wh-pills"></div>
+      </div>
+      <div class="card card-p">
+        <div class="section-lbl">Inventory Levels by Category</div>
+        <div style="position:relative;height:220px;"><canvas id="chart-inventory"></canvas></div>
+      </div>
+    </div>
+    <div class="section-lbl">All Warehouses</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="wh-grid"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE: INSIGHTS ════ -->
+<div id="page-insights" class="page">
+  <div class="inner-page">
+    <div class="flex-between inner-header">
+      <div><div class="inner-title">Analytics &amp; Insights</div><div class="inner-sub">Delivery trends, supplier performance, cost analysis &amp; record integrity</div></div>
+      <select class="inp" id="insight-q" onchange="renderInsightCharts()" style="width:auto;">
+        <option value="Q1">Q1 2026</option><option value="Q2">Q2 2026</option><option value="Q3" selected>Q3 2026</option>
+      </select>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active" onclick="insightTab('delivery',this)">📊 Delivery</button>
+      <button class="tab" onclick="insightTab('supplier',this)">🏭 Supplier</button>
+      <button class="tab" onclick="insightTab('cost',this)">💰 Cost</button>
+      <button class="tab" onclick="insightTab('integrity',this)">🔒 Record Integrity</button>
+    </div>
+    <div id="ins-delivery">
+      <div class="grid-2 mb-4">
+        <div class="card card-p"><div class="section-lbl">On-Time vs Delayed (Monthly)</div><div style="position:relative;height:220px;"><canvas id="chart-otd"></canvas></div></div>
+        <div class="card card-p"><div class="section-lbl">Delivery Speed Distribution</div><div style="position:relative;height:220px;"><canvas id="chart-speed"></canvas></div></div>
+      </div>
+      <div class="card card-p"><div class="section-lbl">Weekly Delivery Volume Heatmap</div><div id="heatmap" style="overflow-x:auto;padding-top:8px;"></div></div>
+    </div>
+    <div id="ins-supplier" style="display:none;">
+      <div class="grid-2">
+        <div class="card card-p"><div class="section-lbl">Supplier Reliability Score (%)</div><div style="position:relative;height:240px;"><canvas id="chart-supplier"></canvas></div></div>
+        <div class="card card-p"><div class="section-lbl">Avg Lead Time by Supplier (days)</div><div style="position:relative;height:240px;"><canvas id="chart-leadtime"></canvas></div></div>
+      </div>
+    </div>
+    <div id="ins-cost" style="display:none;">
+      <div class="grid-2">
+        <div class="card card-p"><div class="section-lbl">Cost per Shipment Trend ($)</div><div style="position:relative;height:240px;"><canvas id="chart-cost"></canvas></div></div>
+        <div class="card card-p"><div class="section-lbl">Cost Breakdown</div><div style="display:flex;gap:20px;align-items:center;"><div style="position:relative;height:200px;flex:1;max-width:200px;"><canvas id="chart-costpie"></canvas></div><div id="cost-legend" style="flex:1;"></div></div></div>
+      </div>
+    </div>
+    <div id="ins-integrity" style="display:none;">
+      <div class="card card-p mb-4">
+        <div class="integrity-disclaimer">
+          <strong>🔒 How Record Integrity Verification Works</strong><br>
+          Each shipment is hashed with <strong>SHA-256</strong> (Web Crypto API) on page load, creating a <em>baseline fingerprint</em> stored in <code>localStorage</code>. When you verify, the current hash is compared to the stored baseline.<br><br>
+          <strong>VERIFIED</strong> = data matches baseline &nbsp;|&nbsp; <strong>TAMPER DETECTED</strong> = data changed since baseline was set.<br><br>
+          <strong>⚠ Limitations:</strong> A mismatch proves data <em>changed</em>, not that it was fraudulent. The original data may not have been truthful. This is a <strong>client-side demo</strong> — not a blockchain, not a server, not a production integrity system.
+        </div>
+      </div>
+      <div class="card card-p">
+        <div class="flex-between mb-4">
+          <div class="section-lbl">Shipment Record Hash Verification</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-green" id="integrity-ok-count">— Verified</span>
+            <span class="badge badge-red" id="integrity-bad-count">— Tampered</span>
+            <button class="btn btn-secondary btn-sm" onclick="resetAllIntegrity()">↺ Reset All Demo</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Shipment ID</th><th>Product</th><th>Stored Baseline Hash</th><th>Current Hash</th><th>Status</th><th>Demo Action</th></tr></thead>
+            <tbody id="integrity-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Computing hashes…</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;font-size:.72rem;color:var(--muted);">Hashed fields: ID · Product · Origin · Destination · Dispatch Date · Expected Delivery · Weight · Value · Carrier · Units</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: REPORTS ════ -->
+<div id="page-reports" class="page">
+  <div class="inner-page">
+    <div class="flex-between inner-header">
+      <div><div class="inner-title">Reports</div><div class="inner-sub">Live statistics from current shipment data. Updates when records change.</div></div>
+      <button class="btn btn-primary" onclick="exportShipmentsCSV()">⬇ Export Shipment CSV</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;" id="rpt-stats"></div>
+    <div class="grid-2 mb-4">
+      <div class="card card-p">
+        <div class="section-lbl">Generate Report</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div><label class="form-label">Report Type</label><select class="inp" id="rpt-type" style="width:100%;"><option>Shipment Summary</option><option>Delivery Performance</option><option>Risk Alerts Report</option><option>Warehouse Inventory</option><option>Carrier Analysis</option></select></div>
+          <div><label class="form-label">Date Range</label><select class="inp" id="rpt-range" style="width:100%;"><option>Last 7 Days</option><option>Last 30 Days</option><option>Last Quarter</option><option>Year to Date</option></select></div>
+          <div><label class="form-label">Export Format</label><div style="display:flex;gap:12px;"><label style="display:flex;align-items:center;gap:6px;font-size:.84rem;cursor:pointer;"><input type="radio" name="fmt" value="CSV" checked> CSV</label><label style="display:flex;align-items:center;gap:6px;font-size:.84rem;cursor:pointer;"><input type="radio" name="fmt" value="PDF"> PDF (demo)</label></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-primary" onclick="generateReport()">Generate &amp; Download</button><button class="btn btn-secondary" onclick="previewReport()">Preview</button></div>
+        </div>
+      </div>
+      <div class="card card-p"><div class="section-lbl">Status Distribution (Live)</div><div style="position:relative;height:220px;"><canvas id="chart-rpt-perf"></canvas></div></div>
+    </div>
+    <div class="card card-p mb-4">
+      <div class="flex-between mb-4"><div class="section-lbl">Delayed &amp; At-Risk Shipments</div><button class="btn btn-secondary btn-sm" onclick="exportDelayedCSV()">⬇ Export CSV</button></div>
+      <div style="overflow-x:auto;"><table class="tbl"><thead><tr><th>ID</th><th>Product</th><th>Route</th><th>Status</th><th>ETA</th><th>Overdue</th><th>Last Checkpoint</th></tr></thead><tbody id="rpt-delayed-tbody"></tbody></table></div>
+    </div>
+    <div class="card card-p">
+      <div class="flex-between mb-4"><div class="section-lbl">Active Risk Alerts</div><button class="btn btn-secondary btn-sm" onclick="exportRisksCSV()">⬇ Export CSV</button></div>
+      <div style="overflow-x:auto;"><table class="tbl"><thead><tr><th>Severity</th><th>Type</th><th>Shipment / WH</th><th>Reason</th><th>Evidence</th></tr></thead><tbody id="rpt-risk-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+'use strict';
+// ─── Constants ───
+const LS_KEY_SHIPS = 'scs_shipments_v1';
+const LS_KEY_BASE  = 'scs_baselines_v1';
+const TODAY = new Date('2026-10-10');
+const FMT = s => { try{ return new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return s; } };
+const daysOverdue = s => Math.max(0, Math.floor((TODAY - new Date(s)) / 86400000));
+const daysLeft    = s => Math.floor((new Date(s) - TODAY) / 86400000);
+const COLORS = ['#f97316','#3b82f6','#22c55e','#a855f7','#ec4899','#14b8a6','#f59e0b','#64748b'];
+
+function showToast(msg, dur=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ─── Sample Data ───
+const SAMPLE_SHIPMENTS = [
+  {id:'SCS-2026-001',product:'Industrial Electronics Batch A7',category:'Electronics',origin:{city:'Shenzhen',country:'China',type:'Manufacturer'},destination:{city:'Chicago',country:'USA',type:'Retailer'},currentLocation:'Los Angeles Port, CA',carrier:'FedEx International',dispatchDate:'2026-09-28',expectedDelivery:'2026-10-13',status:'Delayed',priority:'High',weight:'450 kg',value:'$24,500',units:200,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Shenzhen, China',date:'2026-09-28',completed:true},{stage:'Export Customs Clearance',icon:'📋',location:'Shenzhen Port, China',date:'2026-09-30',completed:true},{stage:'Ocean Freight',icon:'🚢',location:'Pacific Ocean',date:'2026-10-05',completed:true},{stage:'Import Customs',icon:'🛃',location:'Los Angeles Port, CA',expected:'2026-10-08',completed:false,delayed:true,delayReason:'Customs hold — additional documentation requested by CBP'},{stage:'Regional Warehouse',icon:'🏢',location:'Los Angeles, CA',expected:'2026-10-09',completed:false},{stage:'Distribution Center',icon:'📦',location:'Denver, CO',expected:'2026-10-11',completed:false},{stage:'Retailer Delivery',icon:'🏪',location:'Chicago, IL',expected:'2026-10-13',completed:false}]},
+  {id:'SCS-2026-002',product:'Automotive Brake Assemblies',category:'Auto Parts',origin:{city:'Detroit',country:'USA',type:'Manufacturer'},destination:{city:'Phoenix',country:'USA',type:'Retailer'},currentLocation:'Albuquerque, NM (In Transit)',carrier:'UPS Ground',dispatchDate:'2026-10-05',expectedDelivery:'2026-10-12',status:'In Transit',priority:'Normal',weight:'320 kg',value:'$8,900',units:80,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Detroit, MI',date:'2026-10-05',completed:true},{stage:'Quality Inspection',icon:'🔍',location:'Detroit, MI',date:'2026-10-06',completed:true},{stage:'Regional Warehouse',icon:'🏢',location:'Memphis, TN',date:'2026-10-07',completed:true},{stage:'Distribution Center',icon:'📦',location:'Dallas, TX',date:'2026-10-09',completed:true},{stage:'Last Mile Transit',icon:'🚚',location:'Albuquerque, NM',expected:'2026-10-11',completed:false},{stage:'Retailer Delivery',icon:'🏪',location:'Phoenix, AZ',expected:'2026-10-12',completed:false}]},
+  {id:'SCS-2026-003',product:'Pharmaceutical Compounds BX-12',category:'Pharmaceuticals',origin:{city:'Frankfurt',country:'Germany',type:'Manufacturer'},destination:{city:'New York',country:'USA',type:'Distribution Hub'},currentLocation:'New York, NY (Delivered)',carrier:'DHL Express',dispatchDate:'2026-09-20',expectedDelivery:'2026-09-30',status:'Delivered',priority:'Critical',weight:'85 kg',value:'$142,000',units:500,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Frankfurt, Germany',date:'2026-09-20',completed:true},{stage:'Cold Chain Verification',icon:'🧪',location:'Frankfurt Airport',date:'2026-09-21',completed:true},{stage:'Air Freight',icon:'✈️',location:'Frankfurt → JFK',date:'2026-09-23',completed:true},{stage:'Import Customs',icon:'🛃',location:'JFK Airport, NY',date:'2026-09-24',completed:true},{stage:'Distribution Hub',icon:'🏢',location:'New York, NY',date:'2026-09-25',completed:true},{stage:'Delivered',icon:'✅',location:'New York, NY',date:'2026-09-29',completed:true}]},
+  {id:'SCS-2026-004',product:'Premium Apparel Collection W26',category:'Apparel',origin:{city:'Mumbai',country:'India',type:'Manufacturer'},destination:{city:'Los Angeles',country:'USA',type:'Retailer'},currentLocation:'San Francisco Port, CA',carrier:'Maersk Line',dispatchDate:'2026-09-25',expectedDelivery:'2026-10-11',status:'At Risk',priority:'High',weight:'1,200 kg',value:'$67,000',units:3000,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Mumbai, India',date:'2026-09-25',completed:true},{stage:'Export Customs',icon:'📋',location:'Mumbai Port',date:'2026-09-27',completed:true},{stage:'Ocean Freight',icon:'🚢',location:'Indian Ocean → Pacific',date:'2026-10-06',completed:true},{stage:'Port Arrival',icon:'⚓',location:'San Francisco Port',expected:'2026-10-09',completed:false,delayed:true,delayReason:'Port congestion — berth allocation delayed 48 hours'},{stage:'Regional Warehouse',icon:'🏢',location:'Fresno, CA',expected:'2026-10-10',completed:false},{stage:'Retailer Delivery',icon:'🏪',location:'Los Angeles, CA',expected:'2026-10-11',completed:false}]},
+  {id:'SCS-2026-005',product:'CNC Machinery Components Set',category:'Machinery',origin:{city:'Osaka',country:'Japan',type:'Manufacturer'},destination:{city:'Seattle',country:'USA',type:'Manufacturer'},currentLocation:'Pacific Ocean (Ocean Freight)',carrier:'NYK Line',dispatchDate:'2026-10-01',expectedDelivery:'2026-10-18',status:'In Transit',priority:'Normal',weight:'2,100 kg',value:'$189,000',units:15,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Osaka, Japan',date:'2026-10-01',completed:true},{stage:'Export Customs',icon:'📋',location:'Kobe Port',date:'2026-10-02',completed:true},{stage:'Ocean Freight',icon:'🚢',location:'Pacific Ocean',expected:'2026-10-14',completed:false},{stage:'Import Customs',icon:'🛃',location:'Seattle Port',expected:'2026-10-15',completed:false},{stage:'Factory Delivery',icon:'🏭',location:'Seattle, WA',expected:'2026-10-18',completed:false}]},
+  {id:'SCS-2026-006',product:'Tropical Fruit Consignment #F44',category:'Perishables',origin:{city:'São Paulo',country:'Brazil',type:'Manufacturer'},destination:{city:'Miami',country:'USA',type:'Distribution Hub'},currentLocation:'Miami Port — Quarantine Hold',carrier:'Hapag-Lloyd',dispatchDate:'2026-10-03',expectedDelivery:'2026-10-10',status:'Delayed',priority:'Critical',weight:'4,500 kg',value:'$31,000',units:9000,checkpoints:[{stage:'Farm Dispatch',icon:'🌿',location:'São Paulo, Brazil',date:'2026-10-03',completed:true},{stage:'Export Customs',icon:'📋',location:'Santos Port',date:'2026-10-04',completed:true},{stage:'Ocean Freight',icon:'🚢',location:'Atlantic Ocean',date:'2026-10-08',completed:true},{stage:'Port Arrival',icon:'⚓',location:'Miami Port',date:'2026-10-09',completed:true},{stage:'Phytosanitary Inspection',icon:'🔬',location:'Miami Port',expected:'2026-10-10',completed:false,delayed:true,delayReason:'USDA phytosanitary hold — pest inspection, perishable risk elevated'},{stage:'Distribution Hub',icon:'🏢',location:'Miami, FL',expected:'2026-10-11',completed:false}]},
+  {id:'SCS-2026-007',product:'Consumer Electronics — Laptops L5X',category:'Electronics',origin:{city:'Austin',country:'USA',type:'Manufacturer'},destination:{city:'Boston',country:'USA',type:'Retailer'},currentLocation:'Boston, MA (Delivered)',carrier:'FedEx Ground',dispatchDate:'2026-10-01',expectedDelivery:'2026-10-08',status:'Delivered',priority:'Normal',weight:'280 kg',value:'$95,000',units:100,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Austin, TX',date:'2026-10-01',completed:true},{stage:'Quality Inspection',icon:'🔍',location:'Austin, TX',date:'2026-10-02',completed:true},{stage:'Regional Warehouse',icon:'🏢',location:'Nashville, TN',date:'2026-10-03',completed:true},{stage:'Distribution Center',icon:'📦',location:'Philadelphia, PA',date:'2026-10-05',completed:true},{stage:'Last Mile',icon:'🚚',location:'Boston, MA',date:'2026-10-06',completed:true},{stage:'Delivered',icon:'✅',location:'Boston, MA',date:'2026-10-07',completed:true}]},
+  {id:'SCS-2026-008',product:'Medical Imaging Devices — MRI Parts',category:'Medical',origin:{city:'Singapore',country:'Singapore',type:'Manufacturer'},destination:{city:'Houston',country:'USA',type:'Hospital'},currentLocation:'Singapore — Awaiting Export Docs',carrier:'Singapore Airlines Cargo',dispatchDate:'2026-10-04',expectedDelivery:'2026-10-12',status:'At Risk',priority:'Critical',weight:'750 kg',value:'$580,000',units:4,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Singapore',date:'2026-10-04',completed:true},{stage:'Export Compliance Check',icon:'📋',location:'Singapore Changi',expected:'2026-10-06',completed:false,delayed:true,delayReason:'Missing CE certification addendum — regulatory compliance hold'},{stage:'Air Freight',icon:'✈️',location:'Singapore → Houston',expected:'2026-10-08',completed:false},{stage:'Import Customs',icon:'🛃',location:'George Bush Intercontinental',expected:'2026-10-10',completed:false},{stage:'Hospital Delivery',icon:'🏥',location:'Houston, TX',expected:'2026-10-12',completed:false}]},
+  {id:'SCS-2026-009',product:'Lithium Battery Packs — EV Series',category:'Auto Parts',origin:{city:'Chicago',country:'USA',type:'Warehouse'},destination:{city:'Atlanta',country:'USA',type:'Manufacturer'},currentLocation:'Nashville, TN (In Transit)',carrier:'XPO Logistics',dispatchDate:'2026-10-08',expectedDelivery:'2026-10-13',status:'In Transit',priority:'High',weight:'890 kg',value:'$44,000',units:120,checkpoints:[{stage:'Warehouse Dispatch',icon:'🏢',location:'Chicago, IL',date:'2026-10-08',completed:true},{stage:'Hazmat Inspection',icon:'☢️',location:'Chicago, IL',date:'2026-10-08',completed:true},{stage:'In Transit',icon:'🚚',location:'Nashville, TN',expected:'2026-10-11',completed:false},{stage:'Distribution Center',icon:'📦',location:'Chattanooga, TN',expected:'2026-10-12',completed:false},{stage:'Factory Delivery',icon:'🏭',location:'Atlanta, GA',expected:'2026-10-13',completed:false}]},
+  {id:'SCS-2026-010',product:'Academic Books & Reference Materials',category:'Media',origin:{city:'London',country:'UK',type:'Manufacturer'},destination:{city:'New York',country:'USA',type:'Retailer'},currentLocation:'New York, NY (Delivered)',carrier:'Royal Mail / USPS',dispatchDate:'2026-09-28',expectedDelivery:'2026-10-09',status:'Delivered',priority:'Low',weight:'640 kg',value:'$12,400',units:1800,checkpoints:[{stage:'Publisher Dispatch',icon:'📚',location:'London, UK',date:'2026-09-28',completed:true},{stage:'Export Customs',icon:'📋',location:'Heathrow, UK',date:'2026-09-29',completed:true},{stage:'Air Freight',icon:'✈️',location:'Heathrow → JFK',date:'2026-10-01',completed:true},{stage:'Import Customs',icon:'🛃',location:'JFK Airport, NY',date:'2026-10-02',completed:true},{stage:'Distribution Center',icon:'📦',location:'Newark, NJ',date:'2026-10-04',completed:true},{stage:'Delivered',icon:'✅',location:'New York, NY',date:'2026-10-08',completed:true}]},
+  {id:'SCS-2026-011',product:'Industrial Chemical Compounds IC-99',category:'Chemicals',origin:{city:'Seoul',country:'South Korea',type:'Manufacturer'},destination:{city:'San Francisco',country:'USA',type:'Warehouse'},currentLocation:'San Francisco Port, CA',carrier:'Evergreen Marine',dispatchDate:'2026-09-30',expectedDelivery:'2026-10-14',status:'In Transit',priority:'High',weight:'3,200 kg',value:'$56,000',units:640,checkpoints:[{stage:'Manufacturer Dispatch',icon:'🏭',location:'Seoul, South Korea',date:'2026-09-30',completed:true},{stage:'Export Customs',icon:'📋',location:'Busan Port',date:'2026-10-01',completed:true},{stage:'Ocean Freight',icon:'🚢',location:'Pacific Ocean',date:'2026-10-08',completed:true},{stage:'Port Arrival',icon:'⚓',location:'San Francisco Port',date:'2026-10-10',completed:true},{stage:'Hazmat Clearance',icon:'☢️',location:'SF Port, CA',expected:'2026-10-11',completed:false,missing:true,delayReason:'MISSING CHECKPOINT: Hazmat docs not uploaded to system. Manual verification required.'},{stage:'Regional Warehouse',icon:'🏢',location:'Fremont, CA',expected:'2026-10-12',completed:false},{stage:'Customer Delivery',icon:'📦',location:'San Francisco, CA',expected:'2026-10-14',completed:false}]},
+  {id:'SCS-2026-012',product:'Luxury Swiss Watches — LE Collection',category:'Luxury Goods',origin:{city:'Milan',country:'Italy',type:'Manufacturer'},destination:{city:'New York',country:'USA',type:'Retailer'},currentLocation:'JFK Airport — Customs Review',carrier:'Alitalia Cargo',dispatchDate:'2026-10-02',expectedDelivery:'2026-10-09',status:'Delayed',priority:'High',weight:'18 kg',value:'$2,100,000',units:24,checkpoints:[{stage:'Boutique Dispatch',icon:'💎',location:'Milan, Italy',date:'2026-10-02',completed:true},{stage:'Export Customs',icon:'📋',location:'Milan Malpensa',date:'2026-10-03',completed:true},{stage:'Air Freight',icon:'✈️',location:'Milan → JFK',date:'2026-10-05',completed:true},{stage:'Import Customs',icon:'🛃',location:'JFK Airport, NY',expected:'2026-10-06',completed:false,delayed:true,delayReason:'High-value declaration review — additional appraisal documentation required'},{stage:'Secure Vault Transfer',icon:'🔐',location:'Manhattan, NY',expected:'2026-10-08',completed:false},{stage:'Retailer Delivery',icon:'🏪',location:'New York, NY',expected:'2026-10-09',completed:false}]},
+];
+
+const WAREHOUSES = [
+  {id:'WH-N1',name:'North Hub Alpha',region:'North',city:'Chicago',capacity:5000,used:3800,status:'Online',temp:'22°C',items:['Electronics','Apparel']},
+  {id:'WH-N2',name:'North Hub Beta',region:'North',city:'Detroit',capacity:3200,used:2100,status:'Online',temp:'20°C',items:['Auto Parts']},
+  {id:'WH-N3',name:'North Express Dock',region:'North',city:'Minneapolis',capacity:1800,used:1650,status:'Online',temp:'15°C',items:['Perishables']},
+  {id:'WH-S1',name:'South Distribution',region:'South',city:'Houston',capacity:7000,used:6700,status:'Online',temp:'24°C',items:['Chemicals','Auto Parts']},
+  {id:'WH-S2',name:'South Reserve',region:'South',city:'Miami',capacity:4000,used:1200,status:'Online',temp:'25°C',items:['Perishables','Apparel']},
+  {id:'WH-S3',name:'South Gulf Terminal',region:'South',city:'New Orleans',capacity:4200,used:3100,status:'Online',temp:'26°C',items:['Machinery','Auto Parts']},
+  {id:'WH-E1',name:'East Coast Center',region:'East',city:'New York',capacity:6500,used:6000,status:'Online',temp:'21°C',items:['Electronics','Pharmaceuticals']},
+  {id:'WH-E2',name:'East Secondary',region:'East',city:'Boston',capacity:2800,used:2200,status:'Online',temp:'19°C',items:['Medical','Books']},
+  {id:'WH-W1',name:'West Pacific Hub',region:'West',city:'Los Angeles',capacity:8000,used:5500,status:'Online',temp:'23°C',items:['Electronics','Machinery']},
+  {id:'WH-W2',name:'West Coast Annex',region:'West',city:'Seattle',capacity:3500,used:900,status:'Online',temp:'18°C',items:['Perishables']},
+  {id:'WH-W3',name:'West Inland Hub',region:'West',city:'Phoenix',capacity:4800,used:1800,status:'Maintenance',temp:'—',items:['Electronics']},
+  {id:'WH-C1',name:'Central Gateway',region:'Central',city:'Kansas City',capacity:5500,used:5100,status:'Online',temp:'22°C',items:['Auto Parts','Machinery']},
+  {id:'WH-C2',name:'Central Reserve A',region:'Central',city:'Denver',capacity:3000,used:2800,status:'Maintenance',temp:'—',items:['Various']},
+  {id:'WH-C3',name:'Central Reserve B',region:'Central',city:'St. Louis',capacity:2500,used:1800,status:'Online',temp:'21°C',items:['Apparel','Books']},
+];
+
+// ─── localStorage ───
+function loadShipments(){
+  try{
+    const raw=localStorage.getItem(LS_KEY_SHIPS);
+    if(raw){const p=JSON.parse(raw);if(Array.isArray(p)&&p.length===SAMPLE_SHIPMENTS.length&&p[0]?.id&&p[0]?.checkpoints)return p;}
+  }catch(e){}
+  return JSON.parse(JSON.stringify(SAMPLE_SHIPMENTS));
+}
+function saveShipments(){ try{localStorage.setItem(LS_KEY_SHIPS,JSON.stringify(SHIPMENTS));}catch(e){} }
+function resetAllData(){ try{localStorage.removeItem(LS_KEY_SHIPS);localStorage.removeItem(LS_KEY_BASE);}catch(e){}location.reload(); }
+
+let SHIPMENTS = loadShipments();
+
+// ─── Risk Detection ───
+function detectRisks(){
+  const risks=[];
+  SHIPMENTS.forEach(s=>{
+    const isD=s.status==='Delivered';
+    if(!isD&&daysOverdue(s.expectedDelivery)>0) risks.push({severity:'high',type:'Overdue Delivery',shipmentId:s.id,product:s.product,reason:`Expected ${FMT(s.expectedDelivery)}, ${daysOverdue(s.expectedDelivery)}d overdue.`,evidence:`Status: ${s.status} | Location: ${s.currentLocation}`});
+    if(!isD&&daysOverdue(s.expectedDelivery)===0){const dl=daysLeft(s.expectedDelivery),pend=s.checkpoints.filter(c=>!c.completed);if(dl<=2&&pend.length>1)risks.push({severity:'medium',type:'Delivery At Risk',shipmentId:s.id,product:s.product,reason:`${dl}d to ETA, ${pend.length} checkpoints pending.`,evidence:`Location: ${s.currentLocation}`});}
+    s.checkpoints.forEach(cp=>{if(!cp.completed&&cp.expected&&daysOverdue(cp.expected)>0)risks.push({severity:cp.delayed?'high':'medium',type:'Missed Checkpoint',shipmentId:s.id,product:s.product,reason:`"${cp.stage}" expected ${FMT(cp.expected)}, ${daysOverdue(cp.expected)}d overdue.`,evidence:cp.delayReason||`Location: ${cp.location}`});});
+    s.checkpoints.forEach(cp=>{if(cp.missing&&!cp.completed)risks.push({severity:'critical',type:'Missing Checkpoint Record',shipmentId:s.id,product:s.product,reason:`"${cp.stage}" absent from system.`,evidence:cp.delayReason||`Location: ${cp.location}`});});
+    if(s._hashMismatch)risks.push({severity:'critical',type:'Record Integrity Alert',shipmentId:s.id,product:s.product,reason:'SHA-256 hash mismatch — record changed after baseline was set.',evidence:`Baseline: ${(s._baselineHash||'').substring(0,16)}… | Current: ${(s._currentHash||'').substring(0,16)}…`});
+    let foundInc=false,hasSeq=false;
+    for(const cp of s.checkpoints){if(!cp.completed)foundInc=true;else if(foundInc){hasSeq=true;break;}}
+    if(hasSeq)risks.push({severity:'medium',type:'Inconsistent Sequence',shipmentId:s.id,product:s.product,reason:'A later checkpoint is "completed" while an earlier one is not.',evidence:'Check checkpoint timeline.'});
+  });
+  WAREHOUSES.forEach(w=>{const p=w.used/w.capacity;if(p>=0.9&&w.status==='Online')risks.push({severity:'medium',type:'Warehouse Capacity Warning',shipmentId:null,product:null,warehouseId:w.id,reason:`${w.name} at ${Math.round(p*100)}% capacity.`,evidence:`Used: ${w.used.toLocaleString()} / ${w.capacity.toLocaleString()} | Region: ${w.region}`});});
+  return risks;
+}
+
+// ─── SHA-256 / Integrity ───
+const baselineHashes={},currentHashes={};
+async function sha256hex(str){
+  try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return Array.from(new Uint8Array(b)).map(v=>v.toString(16).padStart(2,'0')).join('');}
+  catch(e){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h)^str.charCodeAt(i);return'fb-'+(Math.abs(h)>>>0).toString(16).padStart(8,'0').repeat(8);}
+}
+function recFP(s){return JSON.stringify({id:s.id,product:s.product,originCity:s.origin.city,originCountry:s.origin.country,destCity:s.destination.city,destCountry:s.destination.country,dispatchDate:s.dispatchDate,expectedDelivery:s.expectedDelivery,weight:s.weight,value:s.value,units:s.units,carrier:s.carrier});}
+
+async function initHashes(){
+  let stored={};
+  try{stored=JSON.parse(localStorage.getItem(LS_KEY_BASE)||'{}');}catch(e){}
+  for(const s of SHIPMENTS){
+    const cur=await sha256hex(recFP(s));
+    currentHashes[s.id]=cur;
+    baselineHashes[s.id]=stored[s.id]||cur;
+    if(!stored[s.id])stored[s.id]=cur;
+    s._hashMismatch=(baselineHashes[s.id]!==cur);
+    s._baselineHash=baselineHashes[s.id];
+    s._currentHash=cur;
+  }
+  try{localStorage.setItem(LS_KEY_BASE,JSON.stringify(stored));}catch(e){}
+}
+async function tamperRecord(id){
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s||s._tampered)return;
+  s._originalValue=s.value;s._originalUnits=s.units;
+  s.value='$'+(parseInt(s.value.replace(/[^0-9]/g,''))+77777).toLocaleString();
+  s.units+=999;s._tampered=true;saveShipments();
+  const h=await sha256hex(recFP(s));currentHashes[s.id]=h;s._hashMismatch=(baselineHashes[s.id]!==h);s._currentHash=h;
+  await renderIntegrityTable();afterDataChange();showToast(`⚡ Tamper applied to ${id}`);
+}
+async function restoreRecord(id){
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s)return;
+  if(s._originalValue!==undefined)s.value=s._originalValue;delete s._originalValue;
+  if(s._originalUnits!==undefined)s.units=s._originalUnits;delete s._originalUnits;
+  s._tampered=false;
+  const h=await sha256hex(recFP(s));currentHashes[s.id]=h;s._hashMismatch=(baselineHashes[s.id]!==h);s._currentHash=h;
+  saveShipments();await renderIntegrityTable();afterDataChange();showToast(`✅ ${id} restored — hash verified`);
+}
+async function resetAllIntegrity(){
+  if(!confirm('Reset all integrity baselines and undo tamper demos?\nThis will reload with original sample data.'))return;
+  resetAllData();
+}
+async function renderIntegrityTable(){
+  const tb=document.getElementById('integrity-tbody');if(!tb)return;
+  tb.innerHTML=SHIPMENTS.map(s=>{
+    const bl=baselineHashes[s.id]||'—',cur=currentHashes[s.id]||'—',ok=bl===cur;
+    return`<tr><td><span style="font-weight:700;color:var(--navy);font-family:monospace;">${s.id}</span></td><td style="max-width:160px;font-size:.8rem;">${s.product}</td><td><span class="hash-text">${bl!=='—'?bl.substring(0,26)+'…':'—'}</span></td><td><span class="hash-text ${ok?'hash-ok':'hash-bad'}">${cur!=='—'?cur.substring(0,26)+'…':'—'}</span></td><td>${ok?'<span class="badge badge-green">✓ VERIFIED</span>':'<span class="badge badge-red">⚠ TAMPER DETECTED</span>'}</td><td style="display:flex;gap:6px;">${!ok?`<button class="btn btn-success btn-sm" onclick="restoreRecord('${s.id}')">↩ Restore</button>`:`<button class="btn btn-danger btn-sm" onclick="tamperRecord('${s.id}')">⚡ Tamper Demo</button>`}</td></tr>`;
+  }).join('');
+  const bad=SHIPMENTS.filter(s=>s._hashMismatch).length;
+  const okEl=document.getElementById('integrity-ok-count'),bdEl=document.getElementById('integrity-bad-count');
+  if(okEl)okEl.textContent=`${SHIPMENTS.length-bad} Verified`;
+  if(bdEl)bdEl.textContent=`${bad} Tampered`;
+}
+
+// ─── Navigation ───
+const chartReg={};let activePage='command';
+function navigate(page,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn)btn.classList.add('active');
+  activePage=page;
+  if(page==='flow'){populateFlowSelect();renderFlowPage();renderFlowRiskPanel();}
+  if(page==='warehouses')renderWarehouses();
+  if(page==='insights')renderInsightCharts();
+  if(page==='reports')renderReportsPage();
+}
+function afterDataChange(){
+  updateHeroCard();updateCommandOverviewCards();renderCommandAlerts();updateRiskBadge();
+  if(activePage==='flow'){renderFlowPage();renderFlowRiskPanel();}
+  if(activePage==='reports')renderReportsPage();
+  renderShipmentTable();
+}
+
+// ─── Charts ───
+function mkChart(id,type,data,opts={}){
+  if(chartReg[id])chartReg[id].destroy();
+  const ctx=document.getElementById(id);if(!ctx)return null;
+  chartReg[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!opts.legend},...(opts.plugins||{})},...(opts.scales?{scales:opts.scales}:{}),...(opts.cutout?{cutout:opts.cutout}:{})}});
+  return chartReg[id];
+}
+
+// ─── Badges ───
+function sBadge(s){const m={'In Transit':'badge-blue','Delivered':'badge-green','Delayed':'badge-red','At Risk':'badge-yellow'};return`<span class="badge ${m[s]||'badge-gray'}">${s}</span>`;}
+function pBadge(p){const m={'Critical':'badge-critical','High':'badge-red','Normal':'badge-blue','Low':'badge-gray'};return`<span class="badge ${m[p]||'badge-gray'}">${p}</span>`;}
+
+// ─── Hero Card ───
+function updateHeroCard(){
+  const active=SHIPMENTS.filter(s=>s.status!=='Delivered').length;
+  const pct=Math.round((active/SHIPMENTS.length)*100);
+  const pctEl=document.getElementById('hero-pct');
+  const barEl=document.getElementById('hero-prog-bar');
+  const countEl=document.getElementById('hero-shipment-count');
+  if(pctEl)pctEl.textContent=pct+'%';
+  if(barEl)barEl.style.width=pct+'%';
+  if(countEl)countEl.textContent=active+' of '+SHIPMENTS.length+' active';
+}
+
+// ─── Command Overview Cards ───
+function updateCommandOverviewCards(){
+  const delivered=SHIPMENTS.filter(s=>s.status==='Delivered').length;
+  const ontime=Math.round((delivered/SHIPMENTS.length)*100);
+  const whOnline=WAREHOUSES.filter(w=>w.status==='Online').length;
+  const active=SHIPMENTS.filter(s=>s.status!=='Delivered').length;
+  const el=n=>document.getElementById(n);
+  if(el('co-active'))el('co-active').innerHTML=`${active} <span class="up">↑</span>`;
+  if(el('co-ontime'))el('co-ontime').innerHTML=`${ontime}% <span class="up">↑</span>`;
+  if(el('co-wh'))el('co-wh').innerHTML=`${whOnline} <span class="badge badge-green" style="font-size:.64rem;">Health</span>`;
+
+  // Logistics flow card
+  const totalCap=WAREHOUSES.filter(w=>w.status==='Online').reduce((a,w)=>a+w.capacity,0);
+  const usedCap=WAREHOUSES.filter(w=>w.status==='Online').reduce((a,w)=>a+w.used,0);
+  const capPct=Math.round(usedCap/totalCap*100);
+  const avail=totalCap-usedCap;
+  if(el('ll-cap'))el('ll-cap').textContent=capPct+'%';
+  if(el('ll-cap-bar'))el('ll-cap-bar').style.width=capPct+'%';
+  if(el('ll-avail'))el('ll-avail').innerHTML=`${avail.toLocaleString()} <span class="stat2-unit">units</span>`;
+  if(el('ll-avail-up'))el('ll-avail-up').textContent=`↑ ${Math.round((totalCap-usedCap)/totalCap*100)}% capacity free`;
+
+  // System alert numbers
+  const risks=detectRisks();
+  const late=SHIPMENTS.filter(s=>s.status==='Delayed'||s.status==='At Risk').length;
+  const capWarn=risks.filter(r=>r.type==='Warehouse Capacity Warning').length;
+  const intWarn=SHIPMENTS.filter(s=>s._hashMismatch).length;
+  if(el('sys-late'))el('sys-late').textContent=late;
+  if(el('sys-cap'))el('sys-cap').textContent=capWarn;
+  if(el('sys-int'))el('sys-int').textContent=intWarn;
+  if(el('inv-count'))el('inv-count').textContent=154;
+}
+
+// ─── Tracking Card ───
+function populateTrackingSelect(){
+  const sel=document.getElementById('track-ship-sel');
+  if(!sel||sel.options.length>0)return;
+  SHIPMENTS.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.id;o.textContent=s.id;
+    sel.appendChild(o);
+  });
+}
+function updateTrackingCard(){
+  const id=document.getElementById('track-ship-sel')?.value;
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s)return;
+  const el=n=>document.getElementById(n);
+  if(el('track-id'))el('track-id').textContent=s.id;
+  const statusMap={'In Transit':'In transit','Delivered':'Delivered','Delayed':'Delayed ⚠','At Risk':'At Risk ⚠'};
+  if(el('track-status-badge')){el('track-status-badge').textContent=statusMap[s.status]||s.status;el('track-status-badge').style.background=s.status==='Delivered'?'#dcfce7':s.status==='In Transit'?'#dbeafe':s.status==='Delayed'?'#fee2e2':'#fef3c7';el('track-status-badge').style.color=s.status==='Delivered'?'#16a34a':s.status==='In Transit'?'#1d4ed8':s.status==='Delayed'?'#dc2626':'#b45309';}
+  if(el('track-current'))el('track-current').textContent=s.currentLocation;
+  if(el('track-departure'))el('track-departure').textContent=`${s.origin.city}, ${s.origin.country}`;
+  if(el('track-arrival'))el('track-arrival').textContent=`${s.destination.city}, ${s.destination.country}`;
+}
+
+// ─── Performance chart (Command page) ───
+function renderCmdPerfChart(){
+  mkChart('chart-perf-cmd','bar',{
+    labels:['Jan','Feb','Mar','Apr','May','Jun'],
+    datasets:[
+      {label:'Shipments',data:[380,420,460,510,490,540],backgroundColor:'rgba(249,115,22,0.85)',borderRadius:6,borderSkipped:false},
+      {label:'Trend',data:[360,400,440,480,470,520],backgroundColor:'rgba(245,158,11,0.4)',borderRadius:6,borderSkipped:false},
+    ]
+  },{legend:false,scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#8aa'}},y:{grid:{color:'rgba(0,0,0,.03)'},ticks:{font:{size:10},color:'#8aa'}}}});
+}
+
+// Inventory snapshot chart
+function renderInvChart(){
+  mkChart('chart-inv-cmd','bar',{
+    labels:['Jan','Feb','Mar','Apr','May'],
+    datasets:[
+      {data:[1.2,1.5,1.8,2.1,2.8],backgroundColor:['rgba(249,115,22,0.35)','rgba(249,115,22,0.5)','rgba(249,115,22,0.65)','rgba(249,115,22,0.8)','rgba(249,115,22,1)'],borderRadius:4,borderSkipped:false},
+    ]
+  },{legend:false,scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#8aa'}},y:{grid:{color:'rgba(0,0,0,.03)'},ticks:{font:{size:9},color:'#8aa',callback:v=>v+'%'}}}});
+}
+
+// ─── Shipment Table ───
+let filteredShipments=[...SHIPMENTS];
+let shipPage=1;const PER=8;
+let selectedId=null;
+
+function renderShipmentTable(){
+  filteredShipments=applyFilters();
+  const tb=document.getElementById('sh-tbody');
+  const empty=document.getElementById('sh-empty');
+  const start=(shipPage-1)*PER;
+  const slice=filteredShipments.slice(start,start+PER);
+  if(!filteredShipments.length){tb.innerHTML='';if(empty)empty.style.display='block';}
+  else{
+    if(empty)empty.style.display='none';
+    tb.innerHTML=slice.map(s=>`<tr class="${s.id===selectedId?'selected':''}" onclick="selectShipment('${s.id}',this)">
+      <td><span style="font-weight:700;color:var(--navy);font-family:monospace;font-size:.82rem;">${s.id}</span></td>
+      <td style="max-width:160px;font-size:.82rem;">${s.product}</td>
+      <td style="font-size:.82rem;">${s.origin.city} <span style="color:var(--orange);">→</span> ${s.destination.city}</td>
+      <td style="font-size:.78rem;">${s.carrier}</td>
+      <td>${sBadge(s.status)}</td>
+      <td style="font-size:.78rem;">${FMT(s.expectedDelivery)}</td>
+      <td>${pBadge(s.priority)}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();selectShipment('${s.id}',this.closest('tr'))">View</button></td>
+    </tr>`).join('');
+  }
+  const total=filteredShipments.length;
+  document.getElementById('sh-count').textContent=total?`Showing ${start+1}–${Math.min(start+PER,total)} of ${total} shipments`:'No results';
+  const pages=Math.ceil(total/PER);
+  document.getElementById('sh-pages').innerHTML=Array.from({length:pages},(_,i)=>`<button class="btn btn-sm ${i+1===shipPage?'btn-primary':'btn-secondary'}" onclick="goShPage(${i+1})">${i+1}</button>`).join('');
+}
+function applyFilters(){
+  const q=(document.getElementById('sh-search')?.value||'').toLowerCase();
+  const st=document.getElementById('sh-status')?.value||'';
+  const pr=document.getElementById('sh-priority')?.value||'';
+  return SHIPMENTS.filter(s=>{
+    const mq=!q||s.id.toLowerCase().includes(q)||s.product.toLowerCase().includes(q)||s.origin.city.toLowerCase().includes(q)||s.destination.city.toLowerCase().includes(q)||s.carrier.toLowerCase().includes(q)||s.currentLocation.toLowerCase().includes(q);
+    return mq&&(!st||s.status===st)&&(!pr||s.priority===pr);
+  });
+}
+function filterShipments(){shipPage=1;renderShipmentTable();}
+function goShPage(p){shipPage=p;renderShipmentTable();}
+
+// ─── Shipment Detail Panel ───
+function selectShipment(id,row){
+  selectedId=id;
+  document.querySelectorAll('#sh-tbody tr').forEach(r=>r.classList.remove('selected'));
+  if(row)row.classList.add('selected');
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s)return;
+  renderDetailPanel(s);
+}
+function showShipmentDetails(id){
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s)return;
+  selectedId=id;renderDetailPanel(s);renderShipmentTable();
+  document.getElementById('detail-panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderDetailPanel(s){
+  const done=s.checkpoints.filter(c=>c.completed).length;
+  const pct=Math.round(done/s.checkpoints.length*100);
+  const barColor=s.status==='Delivered'?'#22c55e':s.status==='Delayed'?'#ef4444':s.status==='At Risk'?'#f59e0b':'#3b82f6';
+  const rows=[['Tracking ID',`<span style="font-family:monospace;font-weight:700;">${s.id}</span>`],['Product',s.product],['Category',s.category],['Route',`${s.origin.city}, ${s.origin.country} → ${s.destination.city}, ${s.destination.country}`],['Current Location',s.currentLocation],['Carrier',s.carrier],['Dispatch',FMT(s.dispatchDate)],['Expected Delivery',FMT(s.expectedDelivery)],['Weight',s.weight],['Value',s.value],['Units',s.units.toLocaleString()],['Status',sBadge(s.status)],['Priority',pBadge(s.priority)]];
+  const cpOpts=s.checkpoints.map((cp,i)=>`<option value="${i}" ${cp.completed?'disabled':''}>
+    ${cp.completed?'✓ ':''} ${cp.stage}${cp.completed?' (done)':''}</option>`).join('');
+  const dp=document.getElementById('detail-panel');
+  dp.innerHTML=`
+    <div class="flex-between" style="margin-bottom:14px;"><div class="section-lbl">Shipment Details</div>${sBadge(s.status)}</div>
+    <table style="width:100%;font-size:.8rem;border-collapse:collapse;margin-bottom:14px;">
+      ${rows.map(([k,v])=>`<tr><td style="padding:4px 0;color:var(--muted);width:42%;vertical-align:top;">${k}</td><td style="padding:4px 0;color:var(--navy);font-weight:600;">${v}</td></tr>`).join('')}
+    </table>
+    <div style="margin-bottom:14px;">
+      <div class="flex-between" style="margin-bottom:5px;"><span style="font-size:.76rem;font-weight:600;">Journey Progress</span><span style="font-size:.76rem;font-weight:700;color:var(--navy);">${pct}% · ${done}/${s.checkpoints.length}</span></div>
+      <div class="prog-wrap-g"><div class="prog-bar-g" style="width:${pct}%;background:${barColor};"></div></div>
+    </div>
+    <div class="section-lbl">Checkpoint Timeline</div>
+    <ul class="timeline" style="margin-bottom:16px;">
+      ${s.checkpoints.map((cp,i)=>{
+        let dc=cp.completed?'done':cp.delayed?'delayed':cp.missing?'missing':'pending';
+        if(!cp.completed&&!cp.delayed&&!cp.missing&&i===done)dc='active';
+        return`<li class="tl-item"><span class="tl-dot ${dc}"></span>
+          <div class="tl-title">${cp.icon||''} ${cp.stage}${cp.completed?' <span style="color:#22c55e;font-size:.72rem;">✓</span>':''}${cp.delayed?' <span style="color:#ef4444;font-size:.72rem;">⚠ DELAYED</span>':''}${cp.missing?' <span style="color:#b45309;font-size:.72rem;">⚠ MISSING</span>':''}</div>
+          <div class="tl-sub">📍 ${cp.location} · ${cp.date?FMT(cp.date):cp.expected?'Expected: '+FMT(cp.expected):'—'}</div>
+          ${cp.delayReason&&cp.delayed?`<div class="tl-warn">⚠ ${cp.delayReason}</div>`:''}
+          ${cp.missing?`<div class="tl-miss">⚠ ${cp.delayReason||'Checkpoint record absent'}</div>`:''}
+        </li>`;
+      }).join('')}
+    </ul>
+    <div class="update-form">
+      <div style="font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;">✏️ Update Shipment Record</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:12px;">Saved to localStorage — persists on refresh. Alerts recalculate automatically.</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Status</label><select class="inp" id="upd-status" style="width:100%;"><option ${s.status==='In Transit'?'selected':''}>In Transit</option><option ${s.status==='Delivered'?'selected':''}>Delivered</option><option ${s.status==='Delayed'?'selected':''}>Delayed</option><option ${s.status==='At Risk'?'selected':''}>At Risk</option></select></div>
+        <div class="form-group"><label class="form-label">Priority</label><select class="inp" id="upd-priority" style="width:100%;"><option ${s.priority==='Critical'?'selected':''}>Critical</option><option ${s.priority==='High'?'selected':''}>High</option><option ${s.priority==='Normal'?'selected':''}>Normal</option><option ${s.priority==='Low'?'selected':''}>Low</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Current Location</label><input class="inp" id="upd-location" value="${s.currentLocation}" placeholder="e.g. Dallas Hub, TX"></div>
+      <div class="form-group"><label class="form-label">Mark Checkpoint Done</label><select class="inp" id="upd-checkpoint" style="width:100%;"><option value="">— Select checkpoint —</option>${cpOpts}</select></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="applyUpdate('${s.id}')">💾 Save Changes</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetToSample('${s.id}')">↺ Reset to Sample</button>
+      </div>
+    </div>`;
+}
+function applyUpdate(id){
+  const s=SHIPMENTS.find(x=>x.id===id);if(!s)return;
+  const st=document.getElementById('upd-status')?.value;
+  const pr=document.getElementById('upd-priority')?.value;
+  const loc=document.getElementById('upd-location')?.value?.trim();
+  const cpIdx=document.getElementById('upd-checkpoint')?.value;
+  if(st)s.status=st;if(pr)s.priority=pr;if(loc)s.currentLocation=loc;
+  if(cpIdx!==''&&cpIdx!=null){const i=parseInt(cpIdx);if(!isNaN(i)&&s.checkpoints[i]){s.checkpoints[i].completed=true;s.checkpoints[i].date=new Date().toISOString().split('T')[0];delete s.checkpoints[i].delayed;delete s.checkpoints[i].missing;}}
+  saveShipments();afterDataChange();renderDetailPanel(s);showToast(`✅ ${id} updated and saved`);
+}
+function resetToSample(id){
+  const orig=SAMPLE_SHIPMENTS.find(x=>x.id===id);if(!orig)return;
+  const i=SHIPMENTS.findIndex(x=>x.id===id);if(i===-1)return;
+  SHIPMENTS[i]=JSON.parse(JSON.stringify(orig));saveShipments();afterDataChange();renderDetailPanel(SHIPMENTS[i]);showToast(`↺ ${id} reset to sample`);
+}
+
+// ─── Alerts ───
+function renderCommandAlerts(){
+  const risks=detectRisks();
+  const badge=document.getElementById('cmd-alert-badge');
+  if(badge)badge.textContent=risks.length+' Active';
+  updateRiskBadge();
+  renderRiskPanel();
+}
+function updateRiskBadge(){const risks=detectRisks();const dot=document.getElementById('notif-dot');if(dot)dot.style.display=risks.length>0?'block':'none';}
+
+function riskItemHTML(r){
+  const cls=r.severity==='critical'?'risk-critical':r.severity==='high'?'risk-high':r.severity==='medium'?'risk-medium':'risk-low';
+  const bc={critical:'badge-critical',high:'badge-red',medium:'badge-yellow',low:'badge-green'}[r.severity]||'badge-gray';
+  return`<div class="risk-item ${cls}">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+      <span class="badge ${bc}">${r.severity.toUpperCase()}</span>
+      <span style="font-weight:700;font-size:.82rem;color:var(--navy);">${r.type}</span>
+      ${r.shipmentId?`<span class="badge badge-gray" style="font-family:monospace;font-size:.68rem;">${r.shipmentId}</span>`:''}
+      ${r.warehouseId?`<span class="badge badge-purple" style="font-size:.68rem;">${r.warehouseId}</span>`:''}
+    </div>
+    <div style="font-size:.78rem;color:#334155;margin-bottom:2px;">${r.reason}</div>
+    <div style="font-size:.7rem;color:var(--muted);"><em>${r.evidence}</em></div>
+  </div>`;
+}
+function renderRiskPanel(){
+  const el=document.getElementById('risk-panel');if(!el)return;
+  const sevF=document.getElementById('risk-sev-filter')?.value||'';
+  const shipF=document.getElementById('risk-ship-filter')?.value||'';
+  let risks=detectRisks();
+  if(sevF)risks=risks.filter(r=>r.severity===sevF);
+  if(shipF)risks=risks.filter(r=>r.shipmentId===shipF||(r.warehouseId&&!shipF));
+  const order={critical:0,high:1,medium:2,low:3};
+  risks.sort((a,b)=>(order[a.severity]||9)-(order[b.severity]||9));
+  el.innerHTML=risks.length?risks.map(riskItemHTML).join(''):'<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No risks match current filters.</div></div>';
+}
+function populateRiskShipFilter(){
+  const rf=document.getElementById('risk-ship-filter');if(!rf||rf.options.length>1)return;
+  SHIPMENTS.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id;rf.appendChild(o);});
+}
+
+// ─── Flow Page ───
+function populateFlowSelect(){
+  const sel=document.getElementById('flow-shipment');if(!sel)return;
+  sel.innerHTML='';
+  SHIPMENTS.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=`${s.id} — ${s.product.substring(0,26)} (${s.status})`;if(selectedId&&s.id===selectedId)o.selected=true;sel.appendChild(o);});
+}
+function renderFlowPage(){
+  const sel=document.getElementById('flow-shipment');if(!sel||!sel.value)return;
+  const s=SHIPMENTS.find(x=>x.id===sel.value);if(!s)return;
+  const sbEl=document.getElementById('flow-status-badge');
+  if(sbEl)sbEl.innerHTML=sBadge(s.status)+' '+pBadge(s.priority);
+  const pipeEl=document.getElementById('flow-pipeline');
+  const noteEl=document.getElementById('flow-delay-note');
+  const done=s.checkpoints.filter(c=>c.completed).length;
+  let html='';const notes=[];
+  s.checkpoints.forEach((cp,i)=>{
+    if(i>0){const conn=(s.checkpoints[i-1].completed&&cp.completed)?'done':s.checkpoints[i-1].completed?'active':'pending';html+=`<div class="pipe-connector ${conn}"></div>`;}
+    const sc=cp.completed?'done':cp.missing?'missing':cp.delayed?'delayed':(i===done?'ps-active':'pending');
+    const bt=cp.completed?'✓ Done':cp.missing?'? Missing':cp.delayed?'⚠ Delayed':(i===done?'● Current':'○ Pending');
+    if(cp.delayReason)notes.push(`${cp.stage}: ${cp.delayReason}`);
+    html+=`<div class="pipeline-stage ${sc}"><div class="ps-circle">${cp.icon||'📦'}</div><div class="ps-name">${cp.stage}</div><div class="ps-loc">${cp.location}</div><div class="ps-badge">${bt}</div></div>`;
+  });
+  if(pipeEl)pipeEl.innerHTML=html;
+  if(noteEl){noteEl.style.display=notes.length?'block':'none';noteEl.innerHTML=notes.length?'⚠ '+notes.join(' | '):'';}
+  const tlEl=document.getElementById('flow-timeline');
+  const pb=document.getElementById('flow-progress-badge');
+  if(pb)pb.textContent=`${done}/${s.checkpoints.length} stages complete`;
+  if(tlEl)tlEl.innerHTML=`<ul class="timeline">${s.checkpoints.map((cp,i)=>{let dc=cp.completed?'done':cp.missing?'missing':cp.delayed?'delayed':(i===done?'active':'pending');return`<li class="tl-item"><span class="tl-dot ${dc}"></span><div class="tl-title">${cp.icon||''} ${cp.stage}${cp.completed?' <span style="color:#22c55e;">✓</span>':''}${cp.delayed?' <span style="color:#ef4444;font-size:.72rem;">⚠ DELAYED</span>':''}${cp.missing?' <span style="color:#b45309;font-size:.72rem;">⚠ MISSING</span>':''}</div><div class="tl-sub">📍 ${cp.location}</div><div class="tl-sub">${cp.date?'🕐 '+FMT(cp.date):cp.expected?'📅 Expected: '+FMT(cp.expected):''}</div>${cp.delayReason&&cp.delayed?`<div class="tl-warn">${cp.delayReason}</div>`:''}${cp.missing?`<div class="tl-miss">${cp.delayReason||'Checkpoint absent'}</div>`:''}</li>`}).join('')}</ul>`;
+}
+function renderFlowRiskPanel(){
+  const el=document.getElementById('flow-risk-panel');if(!el)return;
+  const sevF=document.getElementById('flow-risk-sev')?.value||'';
+  let risks=detectRisks();
+  if(sevF)risks=risks.filter(r=>r.severity===sevF);
+  const order={critical:0,high:1,medium:2,low:3};
+  risks.sort((a,b)=>(order[a.severity]||9)-(order[b.severity]||9));
+  el.innerHTML=risks.length?risks.map(riskItemHTML).join(''):'<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">No risks match filters.</div></div>';
+}
+
+// ─── Warehouses ───
+function renderWarehouses(){
+  const region=document.getElementById('wh-region')?.value||'';
+  const list=region?WAREHOUSES.filter(w=>w.region===region):WAREHOUSES;
+  const grid=document.getElementById('wh-grid');if(!grid)return;
+  grid.innerHTML=list.map(w=>{
+    const pct=Math.round(w.used/w.capacity*100);
+    const bc=pct>=90?'#ef4444':pct>=70?'#f97316':'#22c55e';
+    const st=w.status==='Online'?'badge-green':'badge-orange';
+    return`<div class="card card-p" style="cursor:pointer;" onclick="whDetail('${w.id}')">
+      <div class="flex-between" style="margin-bottom:12px;"><div><div style="font-weight:700;font-size:.88rem;color:var(--navy);">${w.name}</div><div style="font-size:.72rem;color:var(--muted);">${w.city} · ${w.region}</div></div><span class="badge ${st}">${w.status}</span></div>
+      ${pct>=90&&w.status==='Online'?`<div class="badge badge-red" style="margin-bottom:8px;font-size:.7rem;">⚠ Capacity Critical: ${pct}%</div>`:''}
+      <div class="flex-between" style="font-size:.76rem;margin-bottom:5px;"><span>Capacity</span><span style="font-weight:700;">${w.used.toLocaleString()} / ${w.capacity.toLocaleString()}</span></div>
+      <div class="prog-wrap-g" style="margin-bottom:6px;"><div class="prog-bar-g" style="width:${pct}%;background:${bc};"></div></div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;">${pct}% used</div>
+      <div style="font-size:.74rem;">${w.items.map(i=>`<span class="badge badge-blue" style="margin-right:3px;margin-bottom:3px;">${i}</span>`).join('')}</div>
+      ${w.status!=='Maintenance'?`<div style="font-size:.7rem;color:var(--muted);margin-top:8px;">🌡 ${w.temp}</div>`:`<div style="font-size:.72rem;color:var(--orange);margin-top:8px;">⚙ Maintenance</div>`}
+    </div>`;
+  }).join('');
+  const regions=[...new Set(WAREHOUSES.map(w=>w.region))];
+  const pills=document.getElementById('wh-pills');
+  if(pills)pills.innerHTML=regions.map(r=>{const cnt=WAREHOUSES.filter(w=>w.region===r).length;return`<span class="badge badge-blue" style="cursor:pointer;" onclick="document.getElementById('wh-region').value='${r}';renderWarehouses();">${r} (${cnt})</span>`;}).join('');
+  mkChart('chart-inventory','bar',{labels:['Electronics','Auto Parts','Apparel','Pharma','Machinery','Perishables','Chemicals','Medical'],datasets:[{data:[14800,8400,9200,3200,6800,4100,3500,2100],backgroundColor:COLORS,borderRadius:6}]},{scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.03)'}}}});
+}
+function whDetail(id){const w=WAREHOUSES.find(x=>x.id===id);if(!w)return;const pct=Math.round(w.used/w.capacity*100);alert(`🏢 ${w.name}\n\nID: ${w.id}\nCity: ${w.city}, Region: ${w.region}\nStatus: ${w.status}\nCapacity: ${w.used.toLocaleString()} / ${w.capacity.toLocaleString()} (${pct}%)\nTemperature: ${w.temp}\nCategories: ${w.items.join(', ')}${pct>=90?'\n\n⚠ CAPACITY CRITICAL':''}\n\n[Demo: In production this opens a detailed warehouse management view]`);}
+
+// ─── Insights ───
+function insightTab(tab,btn){
+  ['delivery','supplier','cost','integrity'].forEach(t=>{const el=document.getElementById('ins-'+t);if(el)el.style.display=t===tab?'block':'none';});
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');
+  if(tab==='supplier')renderSupplierCharts();
+  if(tab==='cost')renderCostCharts();
+  if(tab==='integrity')renderIntegrityTable();
+  if(tab==='delivery')renderDeliveryCharts();
+}
+function renderInsightCharts(){renderDeliveryCharts();}
+function renderDeliveryCharts(){
+  mkChart('chart-otd','bar',{labels:['Jul','Aug','Sep'],datasets:[{label:'On-Time',data:[412,458,503],backgroundColor:'rgba(249,115,22,.75)',borderRadius:6},{label:'Delayed',data:[38,29,21],backgroundColor:'rgba(245,158,11,.6)',borderRadius:6}]},{legend:true,scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.03)'}}}});
+  mkChart('chart-speed','doughnut',{labels:['Same Day','1–2 Days','3–5 Days','6–10 Days','10+ Days'],datasets:[{data:[8,30,41,17,4],backgroundColor:['#22c55e','#3b82f6','#f97316','#f59e0b','#ef4444'],borderWidth:2,borderColor:'#fff'}]},{legend:true,cutout:'55%'});
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],weeks=['W1','W2','W3','W4'];
+  const data=[[72,85,91,68,110,45,30],[88,95,78,102,115,50,28],[65,79,99,88,105,60,35],[90,108,112,95,118,55,32]];
+  const max=Math.max(...data.flat());
+  const hm=document.getElementById('heatmap');
+  if(hm)hm.innerHTML=`<table style="border-collapse:separate;border-spacing:5px;"><tr><td></td>${days.map(d=>`<td style="font-size:.7rem;color:var(--muted);text-align:center;padding:2px 6px;">${d}</td>`).join('')}</tr>${weeks.map((w,wi)=>`<tr><td style="font-size:.7rem;color:var(--muted);padding-right:8px;">${w}</td>${data[wi].map(v=>{const a=(v/max).toFixed(2);return`<td style="width:40px;height:30px;background:rgba(249,115,22,${a});border-radius:6px;text-align:center;font-size:.7rem;font-weight:600;color:${parseFloat(a)>.55?'#fff':'#1e293b'};">${v}</td>`;}).join('')}</tr>`).join('')}</table>`;
+}
+function renderSupplierCharts(){
+  const s=['Alpha','Beta','Gamma','Delta','Epsilon'];
+  mkChart('chart-supplier','bar',{labels:s,datasets:[{data:[95,82,91,78,88],backgroundColor:COLORS,borderRadius:6}]},{legend:false,scales:{x:{grid:{display:false}},y:{min:60,max:100,grid:{color:'rgba(0,0,0,.03)'}}}});
+  mkChart('chart-leadtime','bar',{labels:s,datasets:[{data:[4.2,6.8,3.9,7.5,5.1],backgroundColor:'rgba(59,130,246,.65)',borderRadius:6}]},{legend:false,scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.03)'}}}});
+}
+function renderCostCharts(){
+  mkChart('chart-cost','line',{labels:['Apr','May','Jun','Jul','Aug','Sep'],datasets:[{data:[46.2,44.8,45.1,43.5,43.0,42.8],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',tension:.4,fill:true,pointBackgroundColor:'#f97316',pointRadius:5}]},{legend:false,scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.03)'}}}});
+  const cats=['Shipping','Warehousing','Handling','Fuel Surcharge','Admin'],cd=[42,23,15,13,7];
+  mkChart('chart-costpie','doughnut',{labels:cats,datasets:[{data:cd,backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},{legend:false,cutout:'60%'});
+  const cl=document.getElementById('cost-legend');
+  if(cl)cl.innerHTML=cats.map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:11px;height:11px;border-radius:50%;background:${COLORS[i]};display:inline-block;"></span><span style="font-size:.82rem;">${c}</span><span style="margin-left:auto;font-weight:700;font-size:.82rem;">${cd[i]}%</span></div>`).join('');
+}
+
+// ─── Reports ───
+function renderReportsPage(){
+  const delivered=SHIPMENTS.filter(s=>s.status==='Delivered').length;
+  const inTrans=SHIPMENTS.filter(s=>s.status==='In Transit').length;
+  const delayed=SHIPMENTS.filter(s=>s.status==='Delayed').length;
+  const atRisk=SHIPMENTS.filter(s=>s.status==='At Risk').length;
+  const risks=detectRisks();const crit=risks.filter(r=>r.severity==='critical').length;
+  const capW=risks.filter(r=>r.type==='Warehouse Capacity Warning').length;
+  const se=document.getElementById('rpt-stats');
+  if(se){const st=[{i:'📦',l:'Total Shipments',v:SHIPMENTS.length,s:'In dataset'},{i:'✅',l:'Delivered',v:delivered,s:`${Math.round(delivered/SHIPMENTS.length*100)}% success rate`},{i:'🚚',l:'In Transit',v:inTrans,s:'On-track'},{i:'⚠️',l:'Delayed / At Risk',v:delayed+atRisk,s:'Need attention'},{i:'🚨',l:'Critical Alerts',v:crit,s:'Immediate action'},{i:'🏭',l:'Capacity Warnings',v:capW,s:'Warehouses ≥90%'}];se.innerHTML=st.map(s=>`<div class="card" style="padding:18px;"><div style="font-size:20px;margin-bottom:6px;">${s.i}</div><div style="font-size:.76rem;color:var(--muted);">${s.l}</div><div style="font-size:1.8rem;font-weight:900;color:var(--navy);line-height:1.1;">${s.v}</div><div style="font-size:.72rem;color:var(--muted);">${s.s}</div></div>`).join('');}
+  mkChart('chart-rpt-perf','bar',{labels:['In Transit','Delivered','Delayed','At Risk'],datasets:[{data:[inTrans,delivered,delayed,atRisk],backgroundColor:['#3b82f6','#22c55e','#ef4444','#f59e0b'],borderRadius:8}]},{legend:false,scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.03)'}}}});
+  const dt=document.getElementById('rpt-delayed-tbody');
+  if(dt){const ds=SHIPMENTS.filter(s=>s.status==='Delayed'||s.status==='At Risk');dt.innerHTML=ds.length?ds.map(s=>{const od=daysOverdue(s.expectedDelivery);const last=s.checkpoints.filter(c=>c.completed).pop();return`<tr><td><span style="font-weight:700;font-family:monospace;">${s.id}</span></td><td style="font-size:.8rem;max-width:140px;">${s.product}</td><td style="font-size:.78rem;">${s.origin.city} → ${s.destination.city}</td><td>${sBadge(s.status)}</td><td style="font-size:.8rem;">${FMT(s.expectedDelivery)}</td><td>${od>0?`<span class="badge badge-red">${od}d overdue</span>`:`<span class="badge badge-yellow">${Math.abs(daysLeft(s.expectedDelivery))}d left</span>`}</td><td style="font-size:.78rem;">${last?`${last.icon||''} ${last.stage}`:'None'}</td></tr>`;}).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">No delayed or at-risk shipments.</td></tr>';}
+  const rt=document.getElementById('rpt-risk-tbody');
+  if(rt){const sc={critical:'badge-critical',high:'badge-red',medium:'badge-yellow',low:'badge-green'};rt.innerHTML=risks.length?risks.map(r=>`<tr><td><span class="badge ${sc[r.severity]||'badge-gray'}">${r.severity.toUpperCase()}</span></td><td style="font-size:.8rem;font-weight:600;color:var(--navy);">${r.type}</td><td style="font-family:monospace;font-size:.78rem;">${r.shipmentId||r.warehouseId||'—'}</td><td style="font-size:.76rem;max-width:200px;">${r.reason}</td><td style="font-size:.72rem;color:var(--muted);max-width:180px;"><em>${r.evidence}</em></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);">No active risk alerts.</td></tr>';}
+}
+function generateReport(){const type=document.getElementById('rpt-type').value,fmt=document.querySelector('input[name="fmt"]:checked')?.value||'CSV';if(fmt==='CSV'){if(type==='Risk Alerts Report')exportRisksCSV();else if(type==='Delivery Performance')exportDelayedCSV();else exportShipmentsCSV();showToast(`✅ ${type} CSV exported`);}else alert(`📄 ${type}\n\n[Demo] PDF requires a server renderer. CSV export is available.`);}
+function previewReport(){const risks=detectRisks();const lines=[`SupplyChain Sentinel — ${document.getElementById('rpt-type').value}`,`Generated: ${new Date().toLocaleString()} (Demo Data)`,`${'─'.repeat(48)}`,`Total: ${SHIPMENTS.length} | Delivered: ${SHIPMENTS.filter(s=>s.status==='Delivered').length} | In Transit: ${SHIPMENTS.filter(s=>s.status==='In Transit').length}`,`Delayed: ${SHIPMENTS.filter(s=>s.status==='Delayed').length} | At Risk: ${SHIPMENTS.filter(s=>s.status==='At Risk').length}`,`Alerts: ${risks.length} (${risks.filter(r=>r.severity==='critical').length} Critical)`,`${'─'.repeat(48)}`,...risks.filter(r=>r.severity==='critical').slice(0,5).map(r=>`[CRITICAL] ${r.type} — ${r.shipmentId||r.warehouseId||'N/A'}\n  ${r.reason.substring(0,80)}`)];alert(lines.join('\n'));}
+
+// ─── CSV ───
+const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+function dlCSV(name,rows){const csv=rows.map(r=>r.map(esc).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=name;a.click();}
+function exportShipmentsCSV(){const h=['Tracking ID','Product','Category','Origin City','Country','Type','Dest City','Country','Type','Current Location','Carrier','Dispatch','Expected Delivery','Status','Priority','Weight','Value','Units','Checkpoints Done','Total'];const r=SHIPMENTS.map(s=>[s.id,s.product,s.category,s.origin.city,s.origin.country,s.origin.type,s.destination.city,s.destination.country,s.destination.type,s.currentLocation,s.carrier,s.dispatchDate,s.expectedDelivery,s.status,s.priority,s.weight,s.value,s.units,s.checkpoints.filter(c=>c.completed).length,s.checkpoints.length]);dlCSV('scs_shipments_'+new Date().toISOString().split('T')[0]+'.csv',[h,...r]);}
+function exportDelayedCSV(){const h=['Tracking ID','Product','Origin','Destination','Status','Expected Delivery','Days Overdue','Last Checkpoint'];const r=SHIPMENTS.filter(s=>s.status==='Delayed'||s.status==='At Risk').map(s=>{const last=s.checkpoints.filter(c=>c.completed).pop();return[s.id,s.product,s.origin.city,s.destination.city,s.status,s.expectedDelivery,daysOverdue(s.expectedDelivery),last?last.stage:'None'];});dlCSV('scs_delayed_'+new Date().toISOString().split('T')[0]+'.csv',[h,...r]);}
+function exportRisksCSV(){const risks=detectRisks();const h=['Severity','Type','Shipment ID','Warehouse ID','Reason','Evidence'];const r=risks.map(x=>[x.severity,x.type,x.shipmentId||'',x.warehouseId||'',x.reason,x.evidence]);dlCSV('scs_risks_'+new Date().toISOString().split('T')[0]+'.csv',[h,...r]);}
+
+// ─── Refresh ───
+function doRefresh(btn){
+  btn.title='Refreshing…';
+  setTimeout(()=>{
+    afterDataChange();
+    if(activePage==='flow'){populateFlowSelect();renderFlowPage();renderFlowRiskPanel();}
+    if(activePage==='insights')renderInsightCharts();
+    if(activePage==='warehouses')renderWarehouses();
+    if(activePage==='reports')renderReportsPage();
+    showToast('↺ Data refreshed');btn.title='Refresh';
+  },500);
+}
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded',async()=>{
+  // Command page
+  updateHeroCard();
+  updateCommandOverviewCards();
+  populateTrackingSelect();
+  updateTrackingCard();
+  renderShipmentTable();
+  renderCommandAlerts();
+  populateRiskShipFilter();
+  renderCmdPerfChart();
+  renderInvChart();
+
+  // Compute hashes async
+  await initHashes();
+  renderCommandAlerts();
+  updateRiskBadge();
+});
+</script>
+</body>
+</html>
